@@ -3,6 +3,7 @@ from typing import Dict, TYPE_CHECKING, Any, List
 import platform
 import sys
 from decimal import Decimal
+from create_yusyutu_dict import CreateYusyutuDict
 from fetch_data_for_list import IFetchDataForList
 
 # 実行時にはインポートせず、型チェックの為だけに書く
@@ -105,6 +106,16 @@ class InstanceFactory:
         if ins_name not in cls._instances:
             cls._instances[ins_name] = CreateUnsouSet()
         return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_createYusyutuDict(cls) -> "CreateYusyutuDict":
+        from create_yusyutu_dict import CreateYusyutuDict
+        ins_name: str = 'createYusyutuDict'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = CreateYusyutuDict()
+        return cls._instances[ins_name]
+
 
 
 

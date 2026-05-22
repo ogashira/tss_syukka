@@ -15,17 +15,24 @@ class CreateJson:
 
 
     def default_method(self, obj):
+        '''
+        DecimalはJSONにならないのでfloatに変換する
+        '''
         if isinstance(obj, Decimal):
             return float(obj)
         raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable_oga')
 
 
     def create_dict_from_list(self, col: List[str], 
-                    data: List[List[Any]])-> List[Dict[str, Any]]:
+                              data: List[List[Any]],
+                              yusyutu_dict: Dict[Tuple,str]
+                              )-> List[Dict[str, Any]]:
 
         list_dict: List[Dict[str,Any]] = []
         for line in data:
+            tmpTuple = (line[0], line[1])
             inner_dict = dict(zip(col, line))
+            inner_dict['輸出向先'] = yusyutu_dict.get(tmpTuple, '') 
             list_dict.append(inner_dict)
 
 

@@ -1,10 +1,13 @@
+import sys
 import csv
 import platform
 from  datetime import date, timedelta
+from re import I
 import warnings
 import pandas as pd
 from typing import List, Any, Tuple
 from abc import ABC, abstractmethod
+from get_idx import GetIdx
 
 warnings.filterwarnings('ignore', category=UserWarning)
 
@@ -35,15 +38,17 @@ class FetchUriageSumi(IFetchDataForList):
                     " RURIDT.RurUriDay AS '出荷予定日',"
                     " RURIDT.RurHinCD AS 'hinban',"
                     " RURIDT.RurHinNam AS '品名',"
-                    " RURMEI_U2002.RmeLotNo AS 'lot',"
-                    " RURMEI_U2002.RmeMSu AS 'cans',"
-                    " RURIDT.RurKoSuUp AS '受注数量',"    # <- これが違う
+                    " RURMEI.RmeLotNo AS 'lot',"
+                    " RURMEI.RmeKoSu AS 'cans'," # <- 単位がKGの時に振替元数量と差し替える
+                    " RURMEI.RmeKoSu AS '受注数量'," 
                     " RURIDT.RurKanriTniCD AS '受注単位',"
                     " RURIHD.RurNonyuNam1 AS '納入先名称１',"
                     " RURIDT.RurCMNo AS '得意先注文ＮＯ',"
                     " RURIDT.RurMBiko AS '備考',"
+                    " RURIDT.RurFree8 AS 'add',"  # TODO 後で直す
                     " RURMEI.RmeKojFrom AS 'factory_name',"
-                    " MA_NONYU.AitRyaku AS '納入先名'"
+                    " MA_NONYU.AitRyaku AS '納入先名',"
+                    " RURMEI_U2002.RmeMSu AS  '振替元数量'" # <- 最終的にはpopする
                     " From dbo.RURIDT"
                     " JOIN dbo.RURMEI"
                     " ON RURIDT.RurUNo = RURMEI.RmeUNo" 
@@ -60,12 +65,12 @@ class FetchUriageSumi(IFetchDataForList):
                     " LEFT JOIN(" 
                         " SELECT MAITEM.AitCD1, MAITEM.AitNam1" 
                         " FROM dbo.MAITEM"
-                        " WHERE MAITEM.AitAitKBN = 'A'"
+                        " WHERE MAITEM.AitAitKBN = 'A'" # A = 運送屋
                     ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
                     " LEFT JOIN("
                         " SELECT MKUBUN.KbnCD, MKUBUN.KbnNam"  
                         " FROM dbo.MKUBUN"
-                        " WHERE MKUBUN.KbnKBN = 'V'"
+                        " WHERE MKUBUN.KbnKBN = 'V'" # V = 配送区分
                     ")KBN ON RURIDT.RurFreeKBN1 = KBN.KbnCD"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
                     " AND RURIDT.RurTokCD < 'T6000'"
@@ -89,9 +94,38 @@ class FetchUriageSumi(IFetchDataForList):
             cursor.close()
             # cnxnは呼び出しもとでクローズ
 
+        # 管理単位がKGの場合はcansの数量を振替元数量(缶)に差し替える
+        # かつ、振替元数量をpopする
+        try:
+            allCans_data = self._kg_to_cans(columns, data_list)
+        except Exception as e:
+            print(e)
+            sys.exit(1)
 
-        return columns, data_list
+        # columnsの振替元数量もpopする
+        columns.pop()
 
+        return columns, allCans_data
+
+
+    def _kg_to_cans(self, col: List[str], 
+                             data: List[List[Any]])-> List[List[Any]]:
+
+
+        tani_idx = GetIdx.get_idx(col, '受注単位')
+        qty_idx = GetIdx.get_idx(col, 'cans')
+        Mqty_idx = GetIdx.get_idx(col, '振替元数量')
+
+        if Mqty_idx != len(col)-1:
+            raise Exception('振替元数量が最終要素になってません')
+            
+        for line in data:
+            if line[tani_idx] == 'KG':
+                line[qty_idx] = line[Mqty_idx]
+                del line[Mqty_idx]
+
+        return data
+        
 
 class FetchUnsoutaiouToke(IFetchDataForList):
 
