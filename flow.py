@@ -2,33 +2,18 @@ import json
 import pprint
 import subprocess
 import sys
+import pprint
 from re import I
 from typing import List, Dict, Any, Set, Tuple
 from get_idx import GetIdx
 from instance_factory import InstanceFactory
+from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
+from uriage_for_packing import UriageForPacking
+from excel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
 
 
 def start()-> None:
 
-    def to_add_1(data: List[List[Any]])->None:
-        for line in data:
-            line[16] = 1
-
-    def del_unsouCode_is_blank(data: List[List[Any]], 
-                               sumi_col: List[str])-> List[List[Any]]:
-        del_data: List[List[Any]] = []
-
-        #unsouCodeのidxを求める
-        unsouIdx: int = GetIdx.get_idx(sumi_col, 'unsouCode')
-
-        for line in data:
-            if line[unsouIdx] == ' ': # line[unsouIdx] = unsouCode
-                continue
-            del_data.append(line)
-
-        return del_data
-
-    
     syukka_date = input('出荷日を入力してください (例: 20260930): ')
 
     InstanceFactory.get_sql_server_effit()
@@ -36,74 +21,119 @@ def start()-> None:
     sumi = InstanceFactory.get_fetchUriageSumi(syukka_date)
     sumi_col, sumi_data = sumi.fetch_data()
 
-    # TODO 後で消す。addに1を入れる
-    to_add_1(sumi_data)
-
-    #unsouCodeが' 'のデータは削除する
-    sumi_data = del_unsouCode_is_blank(sumi_data, sumi_col)
-
-    
-    '''unsoutaiouデータを取得 '''
+    #unsoutaiouデータを取得
     unsoutaiou = InstanceFactory.get_fetchUnsoutaiouToke()
     unsoutaiou_col, unsoutaiou_data = unsoutaiou.fetch_data()
 
-    ''' yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}'''
-    create_yusyutuDict = InstanceFactory.get_createYusyutuDict()
-    yusyutu_dict = create_yusyutuDict.create_yusyutuDict(unsoutaiou_data, 
+    #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
+    createDictFromList = InstanceFactory.get_createDictFromList()
+    yusyutu_dict = createDictFromList.create_yusyutuDict(unsoutaiou_data, 
                                                             unsoutaiou_col)
+    #sumi_col, sumi_dataを辞書にする
+    # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
+    sumi_dicts:List[Dict[str,Any]] = \
+            createDictFromList.create_dict_from_list(sumi_col, sumi_data)
+
+    #Uriageインスタンス生成し、uriages_toke, uriages_honsyaに分ける
+    uriages_toke: List[UriageForSyukkaJisseki] = []
+    uriages_honsya: List[UriageForSyukkaJisseki] = []
+    for sumi_dict in sumi_dicts:
+        uriage_instance: UriageForSyukkaJisseki = UriageForSyukkaJisseki(sumi_dict, yusyutu_dict)
+        if sumi_dict['factory_name'] == '@0001':
+            uriages_honsya.append(uriage_instance)
+            continue
+        uriages_toke.append(uriage_instance)
 
     createJson = InstanceFactory.get_createJson()
-    '''yusyutu_dictを一緒に渡して、'輸出向先キーも追加する' '''
-    sumi_dict:List[Dict[str,Any]] = \
-            createJson.create_dict_from_list(sumi_col, sumi_data, yusyutu_dict)
-    sumi_json_str = createJson.create_json_str(sumi_dict)
-
-    
-
-    createUnsouSet = InstanceFactory.get_createUnsouSet()
-    unsouSet: Set[Tuple] = set()
-    # unsouSet { ('U0001', '1', 'y'), ('U0001', '1', '')......}
-    try:
-        unsouSet = createUnsouSet.create_unsouSet(sumi_data, 
-                                                  sumi_col, yusyutu_dict)
-    except IndexError as e:
-        print(e)
-        sys.exit(1)
-    except KeyError as e:
-        sys.exit(1)
-
+    syukkaJissekiSyoukais: List[IExcelOutput] = []
     unsouSet_col = [ 'unsou_code', 'kubun_no', 'yusyutu' ]
-    unsouSet_dict = createJson.create_dict_from_set(unsouSet_col, unsouSet)
-    unsouSet_json_str = createJson.create_json_str(unsouSet_dict)
+    syukkaJissekiSyoukai_honsya: IExcelOutput = None
+    syukkaJissekiSyoukai_toke: IExcelOutput = None
+    # uriages_tokeに要素があったらsmiData_tokeのインスタンスを生成
+    if uriages_toke:
+        syukkaJissekiSyoukai_toke = SyukkaJissekiSyoukai(uriages_toke,
+                                                         createJson,
+                                                         '@0002',
+                                                         unsouSet_col,
+                                                         createDictFromList)
+        syukkaJissekiSyoukais.append(syukkaJissekiSyoukai_toke)
 
-    print(unsouSet_json_str)
-    print('*********************************************************')
-    print(sumi_json_str)
-
+    # uriages_honsya に要素があったらsmiData_honsyaのインスタンスを生成
+    if uriages_honsya:
+        syukkaJissekiSyoukai_honsya = \
+                                 SyukkaJissekiSyoukai(uriages_honsya, 
+                                                      createJson,
+                                                      '@0001',
+                                                      unsouSet_col,
+                                                      createDictFromList)
+        syukkaJissekiSyoukais.append(syukkaJissekiSyoukai_honsya)
 
     exe_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoSkJsBat\ToyoKogyoSkJsBat.exe'
 
     output_path = r'C:\Users\toyo-pc12\Desktop'
-    
-    factoryName = "土気"
-    syukkaKoujou = "出荷工場：@0002 土気工場"
     barcodeFolder = r'C:\Users\toyo-pc12\Desktop' 
 
+    for syukkaJissekiSyoukai in syukkaJissekiSyoukais:
+        result = syukkaJissekiSyoukai.create_excelOutput(exe_path,
+                                                         output_path,
+                                                         barcodeFolder)
+        print (f'returncode= {result.returncode}')
 
-    args = [
-            unsouSet_json_str,
-            sumi_json_str,
-            output_path,
-            factoryName,
-            syukkaKoujou,
-            barcodeFolder
-            ]
+
+    ''' ここから業務_packing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
+    sumi_for_packing = InstanceFactory.get_fetchUriageSumiForPacking(syukka_date)
+    sumi_for_packing_col, sumi_for_packing_data = sumi_for_packing.fetch_data()
+
+    #TODO
+    pprint.pprint(sumi_for_packing_data)
+
+    #sumi_for_packing_col, sumi_for_packing_dataを辞書にする
+    # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
+    sumi_for_packing_dicts:List[Dict[str,Any]] = \
+            createDictFromList.create_dict_from_list(sumi_for_packing_col, 
+                                                     sumi_for_packing_data)
+    #UriageForPackingインスタンス生成し、uriageForPackings_toke, uriageForPackings_honsyaに分ける
+    uriageForPackings_toke: List[UriageForPacking] = []
+    uriageForPackings_honsya: List[UriageForPacking] = []
+    for sumi_for_packing_dict in sumi_for_packing_dicts:
+        uriageForPacking_instance: UriageForPacking = \
+                UriageForPacking(sumi_for_packing_dict, yusyutu_dict)
+        if sumi_for_packing_dict['factory_name'] == '@0001':
+            uriageForPackings_honsya.append(uriageForPacking_instance)
+            continue
+        uriageForPackings_toke.append(uriageForPacking_instance)
+
+    createJson = InstanceFactory.get_createJson()
+    allPackings: List[IExcelOutput] = []
+    allPackings_honsya: IExcelOutput = None
+    allPackings_toke: IExcelOutput = None
+    # uriageForPacking_tokeに要素があったらsmiData_tokeのインスタンスを生成
+    if uriageForPackings_toke:
+        allPackings_toke = AllPackings(uriageForPackings_toke,
+                               createJson,
+                               '@0002',
+                               createDictFromList)
+        allPackings.append(allPackings_toke)
+    # uriageForPacking_honsyaに要素があったらsmiData_tokeのインスタンスを生成
+    if uriageForPackings_honsya:
+        allPackings_honsya = AllPackings(uriageForPackings_honsya,
+                               createJson,
+                               '@0001',
+                               createDictFromList)
+        allPackings.append(allPackings_honsya)
+    
+    exe_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoPackingBat\ToyoKogyoPackingBat.exe'
+    myFolder = r'C:\Users\toyo-pc12\Desktop'
+
+    if allPackings_toke is not None:
+        result = allPackings_toke.create_excelOutput(exe_path, myFolder)
+
+    if allPackings_honsya is not None:
+        result = allPackings_honsya.create_excelOutput(exe_path, myFolder)
 
     InstanceFactory.delete_cnxn
 
-    result = subprocess.run([exe_path] + args, capture_output=True, text=True)
 
-    print(f'returncode= {result.returncode}')
 
 
 

@@ -18,6 +18,71 @@ class IFetchDataForList(ABC):
         pass
 
 
+class FetchUriageSumiForPacking(IFetchDataForList):
+
+    def __init__(self, cnxn, syukka_date:str) -> None:
+        self.cnxn = cnxn
+        self._syukka_date = "'" + syukka_date + "'"
+        
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT RURIDT.RurTokCD AS '得意先コード',"
+                    " RURIDT.RurNonyuCD AS '納入先コード',"
+                    " RURIHD.RurNonyuNam1 AS '納入先名称１',"
+                    " RURIDT.RurCMNo AS '得意先注文ＮＯ',"
+                    " RURIHD.RurUnsCD AS 'unsouCD',"
+                    " MA_UNS.aitNam1 AS '依頼先',"
+                    " RURIDT.RurNODay AS '納期',"
+                    " RURIDT.RurHinNam AS '品名',"
+                    " RURIDT.RurKoSu AS 'uriKosu',"
+                    " RURIDT.RurKanriTniCD AS '受注単位',"
+                    " RURMEI_U2002.RmeMHinCD AS 'motoHinCD',"
+                    " RURMEI_U2002.RmeMSu AS 'motoSu',"
+                    " RURMEI_U2002.RmeMtniCD AS 'motoTni',"
+                    " RURIDT.RurUriTnk AS 'uriTnk',"
+                    " RURIDT.RurUriKin AS 'uriKin',"
+                    " RURIDT.RurMBiko AS '備考',"
+                    " RURIDT.RurKojFrom AS 'factory_name'"
+                    " From dbo.RURIDT"
+                    " JOIN dbo.RURIHD"
+                    " ON RURIDT.RurUNo = RURIHD.RurUNo" 
+                    " LEFT JOIN dbo.RURMEI_U2002"
+                    " ON RURIDT.RurUNo = RURMEI_U2002.RmeUNo"
+                    " AND RURIDT.RurUGNo = RURMEI_U2002.RmeUGNo"
+                    " LEFT JOIN(" 
+                        " SELECT MAITEM.AitCD1, MAITEM.AitNam1" 
+                        " FROM dbo.MAITEM"
+                        " WHERE MAITEM.AitAitKBN = 'A'" # A = 運送屋
+                    ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
+                    " WHERE RURIDT.RurUriDay =" + self._syukka_date +
+                    " AND RURIDT.RurTokCD < 'T6000'"
+                    " ORDER BY RURIDT.RurTokCD, RURIDT.RurNonyuCD, RURIDT.RurCMNo"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception:
+            print(f'データベースfetch中に予期せぬエラーです fetch_hinban')
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+
+        return columns, data_list
+
+
 class FetchUriageSumi(IFetchDataForList):
 
     def __init__(self, cnxn, syukka_date:str) -> None:
@@ -39,7 +104,6 @@ class FetchUriageSumi(IFetchDataForList):
                     " RURIDT.RurHinCD AS 'hinban',"
                     " RURIDT.RurHinNam AS '品名',"
                     " RURMEI.RmeLotNo AS 'lot',"
-                    " RURMEI.RmeKoSu AS 'cans'," # <- 単位がKGの時に振替元数量と差し替える
                     " RURMEI.RmeKoSu AS '受注数量'," 
                     " RURIDT.RurKanriTniCD AS '受注単位',"
                     " RURIHD.RurNonyuNam1 AS '納入先名称１',"
@@ -48,7 +112,7 @@ class FetchUriageSumi(IFetchDataForList):
                     " RURIDT.RurFree8 AS 'add',"  # TODO 後で直す
                     " RURMEI.RmeKojFrom AS 'factory_name',"
                     " MA_NONYU.AitRyaku AS '納入先名',"
-                    " RURMEI_U2002.RmeMSu AS  '振替元数量'" # <- 最終的にはpopする
+                    " RURMEI_U2002.RmeMSu AS  '振替元数量'" 
                     " From dbo.RURIDT"
                     " JOIN dbo.RURMEI"
                     " ON RURIDT.RurUNo = RURMEI.RmeUNo" 
@@ -74,7 +138,7 @@ class FetchUriageSumi(IFetchDataForList):
                     ")KBN ON RURIDT.RurFreeKBN1 = KBN.KbnCD"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
                     " AND RURIDT.RurTokCD < 'T6000'"
-                    " ORDER BY RURIDT.RurUNo, RURIDT.RurUGNo"
+                    " ORDER BY RURIDT.RurTokCD, RURIDT.RurNonyuCD"
                     )
 
         data_list: List[List[Any]] = []
@@ -94,38 +158,8 @@ class FetchUriageSumi(IFetchDataForList):
             cursor.close()
             # cnxnは呼び出しもとでクローズ
 
-        # 管理単位がKGの場合はcansの数量を振替元数量(缶)に差し替える
-        # かつ、振替元数量をpopする
-        try:
-            allCans_data = self._kg_to_cans(columns, data_list)
-        except Exception as e:
-            print(e)
-            sys.exit(1)
+        return columns, data_list
 
-        # columnsの振替元数量もpopする
-        columns.pop()
-
-        return columns, allCans_data
-
-
-    def _kg_to_cans(self, col: List[str], 
-                             data: List[List[Any]])-> List[List[Any]]:
-
-
-        tani_idx = GetIdx.get_idx(col, '受注単位')
-        qty_idx = GetIdx.get_idx(col, 'cans')
-        Mqty_idx = GetIdx.get_idx(col, '振替元数量')
-
-        if Mqty_idx != len(col)-1:
-            raise Exception('振替元数量が最終要素になってません')
-            
-        for line in data:
-            if line[tani_idx] == 'KG':
-                line[qty_idx] = line[Mqty_idx]
-                del line[Mqty_idx]
-
-        return data
-        
 
 class FetchUnsoutaiouToke(IFetchDataForList):
 

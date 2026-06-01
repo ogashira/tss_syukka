@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Tuple, Set
 from get_idx import GetIdx
 
-class CreateYusyutuDict:
+class CreateDictFromList:
     def __init__(self)-> None:
         pass
 
@@ -27,3 +27,35 @@ class CreateYusyutuDict:
 
         return yusyutu_dict
 
+
+    def create_dict_from_list(self, col: List[str], 
+                              data: List[List[Any]],
+                              )-> List[Dict[str, Any]]:
+        '''
+        カラム名と２次元リストから複数辞書を作ってリストにする。
+        '''
+
+        list_dict: List[Dict[str,Any]] = []
+        for line in data:
+            inner_dict = dict(zip(col, line))
+            list_dict.append(inner_dict)
+
+        return list_dict
+
+        
+    def create_dict_from_set(self, col: List[str], 
+                    data: Set[Tuple[str]])-> List[Dict[str, str]]:
+        '''
+        カラム名とタプルのセットから複数辞書を作ってリストにする。
+        col = ['unsou_code','kubun','yusyutu']
+        data = {('U0007',1,'y'), ('U0001',1,'y'),('U0001',1,'').....}
+        ↑タプルのセット
+        output = [{'unsou_code':'U0007','kubun':1,'yusyutu':'y'},{.........},...]
+        '''
+
+        list_dict: List[Dict[str,str]] = []
+        for line in data:
+            inner_dict = dict(zip(col, line))
+            list_dict.append(inner_dict)
+
+        return list_dict

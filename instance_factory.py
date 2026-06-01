@@ -3,15 +3,13 @@ from typing import Dict, TYPE_CHECKING, Any, List
 import platform
 import sys
 from decimal import Decimal
-from create_yusyutu_dict import CreateYusyutuDict
 from fetch_data_for_list import IFetchDataForList
 
 # 実行時にはインポートせず、型チェックの為だけに書く
 if TYPE_CHECKING:
     from recorder import Recorder
     from create_json import CreateJson
-    from create_unsouSet import CreateUnsouSet
-    from list_to_dict import ListToDict
+    from create_dict_from_list import CreateDictFromList
 
 
 class InstanceFactory:
@@ -91,6 +89,17 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchUriageSumiForPacking(cls, syukka_date) -> IFetchDataForList:
+        from fetch_data_for_list import FetchUriageSumiForPacking
+        ins_name: str = 'fetchUriageSumiForPacking'
+        if ins_name not in cls._instances:
+            cls.get_sql_server_effit()
+            cls._instances[ins_name] = FetchUriageSumiForPacking(
+                                              cls._cnxn_effit, syukka_date)
+        return cls._instances[ins_name]
+
+
+    @classmethod
     def get_createJson(cls) -> "CreateJson":
         from create_json import CreateJson
         ins_name: str = 'createJson'
@@ -100,23 +109,12 @@ class InstanceFactory:
 
 
     @classmethod
-    def get_createUnsouSet(cls) -> "CreateUnsouSet":
-        from create_unsouSet import CreateUnsouSet
-        ins_name: str = 'createunsouSet'
+    def get_createDictFromList(cls) -> "CreateDictFromList":
+        from create_dict_from_list import CreateDictFromList
+        ins_name: str = 'createDictFromList'
         if ins_name not in cls._instances:
-            cls._instances[ins_name] = CreateUnsouSet()
+            cls._instances[ins_name] = CreateDictFromList()
         return cls._instances[ins_name]
-
-
-    @classmethod
-    def get_createYusyutuDict(cls) -> "CreateYusyutuDict":
-        from create_yusyutu_dict import CreateYusyutuDict
-        ins_name: str = 'createYusyutuDict'
-        if ins_name not in cls._instances:
-            cls._instances[ins_name] = CreateYusyutuDict()
-        return cls._instances[ins_name]
-
-
 
 
     @classmethod
