@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class IExcelOutput(ABC):
     @abstractmethod
-    def create_excelOutput(self, exe_path: str, 
+    def create_tssBat(self, exe_path: str, 
                            output_path: str, 
                            barcodeFolder: str = "")->object:
         pass
@@ -76,7 +76,7 @@ class SyukkaJissekiSyoukai(IExcelOutput):
         return self._createJson.create_json_str(unsouSet_dict)
 
 
-    def create_excelOutput(self, exe_path: str, output_path: str, 
+    def create_tssBat(self, exe_path: str, output_path: str, 
                            barcodeFolder: str = "")->object:
         args = [
                 self._unsouSet_json_str,
@@ -149,7 +149,7 @@ class AllPackings(IExcelOutput):
         return self._createJson.create_json_str(packing_dicts)
 
     
-    def create_excelOutput(self, exe_path: str, output_path: str, barcodeFolder: str = "") -> object:
+    def create_tssBat(self, exe_path: str, output_path: str, barcodeFolder: str = "") -> object:
         args = [
                 output_path,
                 self._packing_json_str,
@@ -162,7 +162,7 @@ class AllPackings(IExcelOutput):
         return result
 
 
-class PackingForDenpyo(IExcelOutput):
+class PackingForDenpyo:
 
     def __init__(self, tokuiCD_tpl: Tuple[str,...], 
                  uriageForPackings: List["UriageForPacking"],

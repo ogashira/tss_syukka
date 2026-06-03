@@ -74,7 +74,7 @@ def start()-> None:
     barcodeFolder = r'C:\Users\toyo-pc12\Desktop' 
 
     for syukkaJissekiSyoukai in syukkaJissekiSyoukais:
-        result = syukkaJissekiSyoukai.create_excelOutput(exe_path,
+        result = syukkaJissekiSyoukai.create_tssBat(exe_path,
                                                          output_path,
                                                          barcodeFolder)
         print (f'returncode= {result.returncode}')
@@ -126,10 +126,10 @@ def start()-> None:
     myFolder = r'C:\Users\toyo-pc12\Desktop'
 
     if allPackings_toke is not None:
-        result = allPackings_toke.create_excelOutput(exe_path, myFolder)
+        result = allPackings_toke.create_tssBat(exe_path, myFolder)
 
     if allPackings_honsya is not None:
-        result = allPackings_honsya.create_excelOutput(exe_path, myFolder)
+        result = allPackings_honsya.create_tssBat(exe_path, myFolder)
 
     InstanceFactory.delete_cnxn
 
