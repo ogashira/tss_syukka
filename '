@@ -1,5 +1,4 @@
 import pprint
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Set, Tuple, TYPE_CHECKING, Optional
@@ -92,10 +91,6 @@ def start()-> None:
     sumi = InstanceFactory.get_fetchUriageSumi(syukka_date)
     sumi_col, sumi_data = sumi.fetch_data()
 
-    if not sumi_data:
-        print('売上データがありません。処理を中止します')
-        sys.exit(1)
-
     #unsoutaiouデータを取得
     unsoutaiou = InstanceFactory.get_fetchUnsoutaiouToke()
     unsoutaiou_col, unsoutaiou_data = unsoutaiou.fetch_data()
@@ -105,30 +100,13 @@ def start()-> None:
     yusyutu_dict: Dict[Tuple,str] = \
             createDictFromList.create_yusyutuDict(unsoutaiou_data, 
                                                             unsoutaiou_col)
-    # 出荷添付リスト(coa)を取得
-    tenpCoa = InstanceFactory.get_fetchSyukkaListCoa()
-    tenpCoa_col, tenpCoa_data = tenpCoa.fetch_data()
-
-    # 出荷添付リスト(sitei_denpyo)を取得
-    tenpSiteiDenpyo = InstanceFactory.get_fetchSyukkaListSiteiDenpyo()
-    tenpSitei_col, tenpSitei_data = tenpSiteiDenpyo.fetch_data()
-
-    # tenpCoa_col, tenpCoa_dataを辞書にする
-    tenpCoa_dicts:List[Dict[str,Any]] = \
-            createDictFromList.create_dict_from_list(tenpCoa_col, tenpCoa_data)
-
-    # tenpSitei_col, tenpSitei_dataを辞書にする
-    tenpSitei_dicts:List[Dict[str,Any]] = \
-            createDictFromList.create_dict_from_list(tenpSitei_col, tenpSitei_data)
-
     #sumi_col, sumi_dataを辞書にする
     # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
     sumi_dicts:List[Dict[str,Any]] = \
             createDictFromList.create_dict_from_list(sumi_col, sumi_data)
 
     #Uriageインスタンス生成し、uriages_toke, uriages_honsyaに分ける
-    uriages = InstanceFactory.get_uriagesHonsyaToke(sumi_dicts, yusyutu_dict, 
-                                                                tenpCoa_dicts)
+    uriages = InstanceFactory.get_uriagesHonsyaToke(sumi_dicts, yusyutu_dict)
     uriages_honsya: List["UriageForSyukkaJisseki"] = uriages[0]
     uriages_toke: List["UriageForSyukkaJisseki"] = uriages[1]
 
@@ -158,6 +136,7 @@ def start()-> None:
                  createDictFromList
                  )
 
+
     ''' ここから業務_packing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     sumi_for_packing = InstanceFactory.get_fetchUriageSumiForPacking(syukka_date)
     sumi_for_packing_col, sumi_for_packing_data = sumi_for_packing.fetch_data()
@@ -177,7 +156,10 @@ def start()-> None:
     uriageForPackings_honsya: List["UriageForPacking"] = uriagePackings[0]
     uriageForPackings_toke: List["UriageForPacking"] = uriagePackings[1]
 
-
+    print('uriages_honsya>>>>>>>>>>>>>>>>>>>')
+    print(uriageForPackings_honsya)
+    print('uriages_toke>>>>>>>>>>>>>>>>>>>')
+    print(uriageForPackings_toke)
     allPackings_honsya: Optional[IExcelOutput] = None
     allPackings_toke: Optional[IExcelOutput] = None
     # uriageForPacking_tokeに要素があったらallPackings__tokeのインスタンスを生成
@@ -229,13 +211,8 @@ def start()-> None:
     createTssBat:CreateTssBat = CreateTssBat(excel_outputs_args)
     results_dic: Dict[str, int]= createTssBat.create_tssBat()
 
-    
-
     for key, val in results_dic.items():
         print(f'{key}: returncode = {val}')
-
-    if not results_dic:
-        print('NoData')
 
 
     InstanceFactory.delete_cnxn

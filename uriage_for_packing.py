@@ -19,7 +19,6 @@ class UriageForPacking:
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
         self._備考: str = dict_data['備考']
         self._納期: str = dict_data['納期']
-        self._出荷: str = "土気出荷"                     # 土気出荷、本社出荷
         self._受注数量: int = dict_data['uriKosu']
         self._受注単位: str = dict_data['受注単位']
         self._add: int = 1
@@ -28,6 +27,13 @@ class UriageForPacking:
         self._売り単価: int = dict_data['uriTnk']
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
         self._cans: int = self._calc_cans()
+        self._出荷: str = self._get_factory_name() # 土気出荷、本社出荷
+
+
+    def _get_factory_name(self)-> str:
+        if self._factory == '@0001':
+            return '本社出荷'
+        return '土気出荷'
 
     def _calc_cans(self)-> int:
         if self._受注単位 != 'CN':

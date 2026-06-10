@@ -88,9 +88,15 @@ class SyukkaJissekiSyoukai(IExcelOutput):
                 ]
 
         result = subprocess.run([exe_path] + args, capture_output=True, text=True)
-        print(f'unsouSet_{self._factoryName}: {self._unsouSet_json_str}')
 
         return result
+
+
+    # TODO
+    def add_mksk(self, mksk_list:List[str])-> None:
+        for uriage in self._uriages:
+            uriage.add_mksk(mksk_list)
+
 
 
 class AllPackings(IExcelOutput):
@@ -157,7 +163,6 @@ class AllPackings(IExcelOutput):
                 ]
 
         result = subprocess.run([exe_path] + args, capture_output=True, text=True)
-        print(f'packing_{self._factoryName}: {self._packing_json_str}')
 
         return result
 

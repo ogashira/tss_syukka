@@ -8,6 +8,7 @@ import pandas as pd
 from typing import List, Any, Tuple
 from abc import ABC, abstractmethod
 from get_idx import GetIdx
+import openpyxl
 
 warnings.filterwarnings('ignore', category=UserWarning)
 
@@ -113,6 +114,8 @@ class FetchUriageSumi(IFetchDataForList):
                     " RURIDT.RurFree8 AS 'add',"  # TODO 後で直す
                     " RURMEI.RmeKojFrom AS 'factory_name',"
                     " MA_NONYU.AitRyaku AS '納入先名',"
+                    " RURMEI_U2002.RmeMHinCD AS 'motoHinCD',"
+                    " RURMEI_U2002.RmeMtniCD AS 'motoTni',"
                     " RURMEI_U2002.RmeMSu AS  '振替元数量'" 
                     " From dbo.RURIDT"
                     " JOIN dbo.RURMEI"
@@ -187,4 +190,65 @@ class FetchUnsoutaiouToke(IFetchDataForList):
         data_list = data[1:]
             
 
+        return columns, data_list
+
+
+
+class FetchSyukkaListCoa(IFetchDataForList):
+
+    def __init__(self) -> None:
+        pass
+        
+
+    def fetch_data(self) -> Tuple[List[Any],List[List[Any]]]:
+        
+        path = r'\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\櫻田\☆☆☆\売上処理(水野課長用)\出荷時添付リスト(20200731時点最新版).xlsx'
+        if platform.system() == 'Linux':
+            path = r'/mnt/public/営業課ﾌｫﾙﾀﾞ/櫻田/☆☆☆/売上処理(水野課長用)/出荷時添付リスト(20200731時点最新版).xlsx'
+        data = []
+        try:
+            # data_only=True を足すだけで、数式ではなく計算結果の値を読み込めます
+            wb = openpyxl.load_workbook(path, data_only=True)
+            ws = wb['成績表']
+
+            # min_row=2 ２行目以降を取り込む iter_rowsタプルをリストに内包表記
+            data = [list(row) for row in ws.iter_rows(min_row = 2, values_only=True)]
+
+        except Exception as e:
+            print('出荷時添付リスト(成績書)のfetchに失敗です')
+            print(e)
+
+        columns = data[0]
+        data_list = data[1:]
+            
+        return columns, data_list
+
+
+class FetchSyukkaListSiteiDenpyo(IFetchDataForList):
+
+    def __init__(self) -> None:
+        pass
+        
+
+    def fetch_data(self) -> Tuple[List[Any],List[List[Any]]]:
+        
+        path = r'\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\櫻田\☆☆☆\売上処理(水野課長用)\出荷時添付リスト(20200731時点最新版).xlsx'
+        if platform.system() == 'Linux':
+            path = r'/mnt/public/営業課ﾌｫﾙﾀﾞ/櫻田/☆☆☆/売上処理(水野課長用)/出荷時添付リスト(20200731時点最新版).xlsx'
+        data = []
+        try:
+            # data_only=True を足すだけで、数式ではなく計算結果の値を読み込めます
+            wb = openpyxl.load_workbook(path, data_only=True)
+            ws = wb['指定伝票']
+
+            # min_row=2 ２行目以降を取り込む iter_rowsタプルをリストに内包表記
+            data = [list(row) for row in ws.iter_rows(min_row = 2, values_only=True)]
+
+        except Exception as e:
+            print('出荷時添付リスト(指定伝票)のfetchに失敗です')
+            print(e)
+
+        columns = data[0]
+        data_list = data[1:]
+            
         return columns, data_list

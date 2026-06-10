@@ -1,10 +1,14 @@
-from typing import Dict, Any, Tuple, Set, List
+from typing import Dict, Any, Tuple, Set, List, Optional
+from get_idx import GetIdx
 
 class UriageForSyukkaJisseki:
-    def __init__(self, dict_data: Dict[str,Any], yusyutu_dict: Dict):
+    def __init__(self, dict_data: Dict[str,Any], 
+                 yusyutu_dict: Dict,
+                 tenpCoa_dicts: List[Dict[str, Any]])-> None:
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
+        self._tenpCoa_dicts = tenpCoa_dicts
         self._factory: str = dict_data['factory_name']
         self._得意先コード: str = dict_data['得意先コード']
         self._納入先コード: str = dict_data['納入先コード']
@@ -13,7 +17,7 @@ class UriageForSyukkaJisseki:
         self._kubun_no: str = dict_data['kubun_no']
         self._kubun: str = dict_data['kubun']
         self._出荷予定日: str = dict_data['出荷予定日']
-        self._hinban: str = dict_data['hinban']
+        self._hinban: str = dict_data['hinban'] # S6-SV3800-1-U, S6-UV361-U
         self._品名: str = dict_data['品名']
         self._lot: str = dict_data['lot']
         self._受注数量: int = dict_data['受注数量']
@@ -23,9 +27,47 @@ class UriageForSyukkaJisseki:
         self._備考: str = dict_data['備考']
         self._add: int = 1
         self._納入先名: str = dict_data['納入先名']
+        self._motoHinCD: str = dict_data['motoHinCD']
+        self._motoTni: str = dict_data['motoTni']
         self._振替元数量: int = dict_data['振替元数量']
         self._cans: int = self._calc_cans()
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
+        self._coa_mksk: str = self._get_mksk()
+
+
+    # TODO
+    def add_mksk(self, mksk_list:List[str])-> None:
+        mksk_list.append(self._coa_mksk)
+
+
+    def _get_mksk(self)-> str:
+        mksk: str = ''
+        for line_dic in self._tenpCoa_dicts:
+            tokuiCD: str = line_dic['得意先ｺｰﾄﾞ']
+            nonyuCD: Optional[str] = line_dic['納入先ｺｰﾄﾞ']
+            if nonyuCD is None: # 添付リストの納入先コードがNoneなら' 'にする
+                nonyuCD = ' '
+            
+            tenpCoa_hinban: str = line_dic['品番']
+
+            '''
+            このインスタンスの品番は、受注単位がCNならhinbanだが、それ以外は
+            motoHinCDが該当する
+            '''
+            this_instance_hinban:str = ''
+            if self._受注単位 == 'CN':
+                this_instance_hinban = self._hinban
+            if self._motoTni == 'CN':
+                this_instance_hinban = self._motoHinCD
+
+
+            if (tokuiCD == self._得意先コード and
+                nonyuCD == self._納入先コード and
+                tenpCoa_hinban == this_instance_hinban):
+                mksk = line_dic['format']
+
+        return mksk
+
 
     def _calc_cans(self)-> int:
         if self._受注単位 != 'CN':

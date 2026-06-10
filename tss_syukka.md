@@ -98,7 +98,8 @@ class CreateTssBat{
     + create_tssBat()Dict[str,int]
 }
 class IExcelOutput{
-    + create_tssBat(str,str,str="")result
+    <<interface>>
+    + create_tssBat(str,str,str="")result*
 }
 class SyukkaJissekiSyoukai{
     - _uriages:List~UriageForSyukkaJisseki~
@@ -151,6 +152,14 @@ class UriageForPacking{
     - _calc_cans()int
     - _calc_yusyutu_mukesaki()str
 }
+class HsCoa{
+    - _uriages:List~UriageForSyukkaJisseki~
+    + create_tssBat(str, str, str=""):result
+}
+class MhsCoa{
+    - _uriages:List~UriageForSyukkaJisseki~
+    + create_tssBat(str, str, str=""):result
+}
 Main --> flow
 flow --> InstanceFactory: "生成を依頼"
 
@@ -160,8 +169,12 @@ InstanceFactory --> SyukkaJissekiSyoukai
 InstanceFactory --> AllPackings
 InstanceFactory --> IExcelOutput: "戻り値の型"
 InstanceFactory --> CreateTssBat
+InstanceFactory --> HsCoa
+InstanceFactory --> MhsCoa
 
 CreateTssBat o-- IExcelOutput
+HsCoa ..|> IExcelOutput
+MhsCoa ..|> IExcelOutput
 SyukkaJissekiSyoukai ..|> IExcelOutput
 AllPackings ..|> IExcelOutput
 AllPackings o--> PackingForDenpyo

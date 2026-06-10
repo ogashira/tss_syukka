@@ -72,7 +72,6 @@ class InstanceFactory:
         from fetch_data_for_list import FetchUnsoutaiouToke
         ins_name: str = 'fetchUnsoutaiouToke'
         if ins_name not in cls._instances:
-            cls.get_sql_server_effit()
             cls._instances[ins_name] = FetchUnsoutaiouToke()
         return cls._instances[ins_name]
 
@@ -96,6 +95,24 @@ class InstanceFactory:
             cls.get_sql_server_effit()
             cls._instances[ins_name] = FetchUriageSumiForPacking(
                                               cls._cnxn_effit, syukka_date)
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_fetchSyukkaListSiteiDenpyo(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchSyukkaListSiteiDenpyo
+        ins_name: str = 'fetchSyukkaListSiteiDenpyo'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchSyukkaListSiteiDenpyo()
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_fetchSyukkaListCoa(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchSyukkaListCoa
+        ins_name: str = 'fetchSyukkaListCoa'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchSyukkaListCoa()
         return cls._instances[ins_name]
 
 
@@ -129,9 +146,11 @@ class InstanceFactory:
     @classmethod
     def get_uriagesHonsyaToke(cls, 
                                 sumi_dicts: List[Dict[str,Any]],
-                                yusyutu_dict: Dict[Tuple,str]) -> Tuple:
+                                yusyutu_dict: Dict[Tuple,str],
+                                tenpCoa_dicts: List[Dict[str,Any]]) -> Tuple:
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         # sumi_dicts = [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
+        # tenpCoa_dicts =[{'得意先ｺｰﾄﾞ':'T1020', '納入先コード':None, .....},{.....}....] 
         from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
         ins_name: str = 'uriagesHonsyaToke'
         uriages_honsya: List[UriageForSyukkaJisseki] = []
@@ -140,7 +159,8 @@ class InstanceFactory:
         if ins_name not in cls._instances:
             for sumi_dict in sumi_dicts:
                 uriage_instance: UriageForSyukkaJisseki = \
-                        UriageForSyukkaJisseki(sumi_dict, yusyutu_dict)
+                        UriageForSyukkaJisseki(sumi_dict, 
+                                            yusyutu_dict, tenpCoa_dicts)
                 if sumi_dict['factory_name'] == '@0001':
                     uriages_honsya.append(uriage_instance)
                     continue
@@ -178,16 +198,17 @@ class InstanceFactory:
         ins_name: str = 'uriagePackingsHonsyaToke'
         uriageForPackings_toke: List[UriageForPacking] = []
         uriageForPackings_honsya: List[UriageForPacking] = []
-        for sumi_for_packing_dict in sumi_for_packing_dicts:
-            uriageForPacking_instance: UriageForPacking = \
-                    UriageForPacking(sumi_for_packing_dict, yusyutu_dict)
-            if sumi_for_packing_dict['factory_name'] == '@0001':
-                uriageForPackings_honsya.append(uriageForPacking_instance)
-                continue
-            uriageForPackings_toke.append(uriageForPacking_instance)
+        if ins_name not in cls._instances:
+            for sumi_for_packing_dict in sumi_for_packing_dicts:
+                uriageForPacking_instance: UriageForPacking = \
+                        UriageForPacking(sumi_for_packing_dict, yusyutu_dict)
+                if sumi_for_packing_dict['factory_name'] == '@0001':
+                    uriageForPackings_honsya.append(uriageForPacking_instance)
+                    continue
+                uriageForPackings_toke.append(uriageForPacking_instance)
 
             cls._instances[ins_name] = (uriageForPackings_honsya, 
-                                        uriageForPackings_toke)
+                                            uriageForPackings_toke)
 
         return cls._instances[ins_name]
 
