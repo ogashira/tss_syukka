@@ -1,15 +1,15 @@
-from dataclasses import dataclass
-from typing import Dict, TYPE_CHECKING, Any, List
+from typing import Dict, TYPE_CHECKING, Any, List, Tuple
 import platform
 import sys
-from decimal import Decimal
+from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
 from fetch_data_for_list import IFetchDataForList
 
 # 実行時にはインポートせず、型チェックの為だけに書く
 if TYPE_CHECKING:
-    from recorder import Recorder
     from create_json import CreateJson
     from create_dict_from_list import CreateDictFromList
+    from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
+    from uriage_for_packing import UriageForPacking
 
 
 class InstanceFactory:
@@ -126,3 +126,86 @@ class InstanceFactory:
         return cls._instances[ins_name]
 
 
+    @classmethod
+    def get_uriagesHonsyaToke(cls, 
+                                sumi_dicts: List[Dict[str,Any]],
+                                yusyutu_dict: Dict[Tuple,str]) -> Tuple:
+        #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
+        # sumi_dicts = [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
+        from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
+        ins_name: str = 'uriagesHonsyaToke'
+        uriages_honsya: List[UriageForSyukkaJisseki] = []
+        uriages_toke: List[UriageForSyukkaJisseki] = []
+        #Uriageインスタンス生成し、uriages_toke, uriages_honsyaに分ける
+        if ins_name not in cls._instances:
+            for sumi_dict in sumi_dicts:
+                uriage_instance: UriageForSyukkaJisseki = \
+                        UriageForSyukkaJisseki(sumi_dict, yusyutu_dict)
+                if sumi_dict['factory_name'] == '@0001':
+                    uriages_honsya.append(uriage_instance)
+                    continue
+                uriages_toke.append(uriage_instance)
+
+            cls._instances[ins_name] = (uriages_honsya, uriages_toke)
+
+        return cls._instances[ins_name]
+
+    
+    @classmethod
+    def get_syukkaJissekiSyoukai(cls, 
+                                 uriages: List["UriageForSyukkaJisseki"],
+                                 createJson: "CreateJson",
+                                 factory_name: str,
+                                 unsouSet_col: List[str],
+                                 createDictFromLIst: "CreateDictFromList"
+                                 ) -> IExcelOutput:
+        syukkaJissekiSyoukai: IExcelOutput = SyukkaJissekiSyoukai(
+                uriages,
+                createJson,
+                factory_name,
+                unsouSet_col,
+                createDictFromLIst)
+        return  syukkaJissekiSyoukai
+
+    
+    @classmethod
+    def get_uriageForPackingsHonsyaToke(cls, 
+                                sumi_for_packing_dicts: List[Dict[str,Any]],
+                                yusyutu_dict: Dict[Tuple,str]) -> Tuple:
+        #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
+        # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
+        from uriage_for_packing import UriageForPacking
+        ins_name: str = 'uriagePackingsHonsyaToke'
+        uriageForPackings_toke: List[UriageForPacking] = []
+        uriageForPackings_honsya: List[UriageForPacking] = []
+        for sumi_for_packing_dict in sumi_for_packing_dicts:
+            uriageForPacking_instance: UriageForPacking = \
+                    UriageForPacking(sumi_for_packing_dict, yusyutu_dict)
+            if sumi_for_packing_dict['factory_name'] == '@0001':
+                uriageForPackings_honsya.append(uriageForPacking_instance)
+                continue
+            uriageForPackings_toke.append(uriageForPacking_instance)
+
+            cls._instances[ins_name] = (uriageForPackings_honsya, 
+                                        uriageForPackings_toke)
+
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_allPackings(cls, 
+                         uriageForPackings: List["UriageForPacking"],
+                         createJson: "CreateJson",
+                         factory_name: str,
+                         createDictFromLIst: "CreateDictFromList"
+                         ) -> IExcelOutput:
+
+        allPackings: AllPackings = AllPackings(
+                uriageForPackings,
+                createJson,
+                factory_name,
+                createDictFromLIst)
+
+        return  allPackings
+
+    

@@ -1,20 +1,90 @@
-import json
 import pprint
-import subprocess
-import sys
-import pprint
-from re import I
-from typing import List, Dict, Any, Set, Tuple
-from get_idx import GetIdx
+from datetime import datetime
+from pathlib import Path
+from typing import List, Dict, Any, Set, Tuple, TYPE_CHECKING, Optional
 from instance_factory import InstanceFactory
-from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
-from uriage_for_packing import UriageForPacking
-from excel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
+from IExcel_output import IExcelOutput
+from create_tss_bat import CreateTssBat
+
+# 実行時にはインポートせず、型チェックの為だけに書く
+if TYPE_CHECKING:
+    from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
+    from uriage_for_packing import UriageForPacking
+
+
+def create_excel_outputs_args(excel_outputs:List[Dict[str,Any]],
+                    output_name: str, excelOutput: Optional[IExcelOutput],
+                    exe_path:str, output_path:str, barcodeFolder: str)->None:
+
+    if excelOutput is None:
+        return
+
+    innerDic: Dict[str, Any] = {}
+    innerDic['output_name'] = output_name
+    innerDic['excel_output'] = excelOutput
+    innerDic['exe_path'] = exe_path
+    innerDic['output_path'] = output_path
+    innerDic['barcodeFolder'] = barcodeFolder
+    excel_outputs.append(innerDic)
+
+
+def make_dire(syukka_date: str)-> str:
+    # 1. ベースとなるディレクトリと今日の年月日を設定
+    base_dir = Path(r"\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\01出荷output_TSS_実装中")
+
+    # 2. 最初のリクエストフォルダ名を作成
+    target_dir = base_dir / syukka_date
+
+    # 3. フォルダがすでに存在する場合、末尾に「_数値」を付与してチェックを繰り返す
+    count = 2
+    while target_dir.exists():
+        target_dir = base_dir / f"{syukka_date}_{count}"
+        count += 1
+
+    # 4. 重複しないフォルダ名が確定したら作成する
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # target_dirを文字列に変換する
+    target_dir_str = str(target_dir)
+
+    return target_dir_str
+
+
+def date_input()-> str:
+    while True:
+        # 1. ユーザーからの入力を受け取る
+        syukka_date = input("出荷日を入力してください(例：20260609) : ")
+        
+        # 2. 文字数のチェック（必ず8桁であること）
+        if len(syukka_date) != 8:
+            print("エラー: 8桁の半角数字で入力してください。")
+            continue  # ループの先頭に戻る
+            
+        # 3. 数字以外が混ざっていないか、および日付として正しいかのチェック
+        try:
+            # 日付形式（YYYYMMDD）に変換できるか検証
+            valid_date = datetime.strptime(syukka_date, "%Y%m%d")
+            
+            # 4. 西暦が 2025年 〜 2100年 の間かチェック
+            if 2025 <= valid_date.year <= 2100:
+                break  # 条件をすべてクリアしたため、ループを抜ける
+            else:
+                print("エラー: 西暦は2025年から2100年の間で入力してください。")
+                
+        except ValueError:
+            # 数字以外の文字が混ざっている場合や、存在しない月日（例: 02月30日など）の場合
+            print("エラー: 正しい日付（数字のみ）を入力してください。")
+
+    # ループを抜けた後の処理
+    print(f"正しい出荷日を受け付けました: {syukka_date}")
+    return syukka_date
 
 
 def start()-> None:
 
-    syukka_date = input('出荷日を入力してください (例: 20260930): ')
+    syukka_date = date_input()
+
+    mydir:str = make_dire(syukka_date)
 
     InstanceFactory.get_sql_server_effit()
 
@@ -27,7 +97,8 @@ def start()-> None:
 
     #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
     createDictFromList = InstanceFactory.get_createDictFromList()
-    yusyutu_dict = createDictFromList.create_yusyutuDict(unsoutaiou_data, 
+    yusyutu_dict: Dict[Tuple,str] = \
+            createDictFromList.create_yusyutuDict(unsoutaiou_data, 
                                                             unsoutaiou_col)
     #sumi_col, sumi_dataを辞書にする
     # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
@@ -35,49 +106,33 @@ def start()-> None:
             createDictFromList.create_dict_from_list(sumi_col, sumi_data)
 
     #Uriageインスタンス生成し、uriages_toke, uriages_honsyaに分ける
-    uriages_toke: List[UriageForSyukkaJisseki] = []
-    uriages_honsya: List[UriageForSyukkaJisseki] = []
-    for sumi_dict in sumi_dicts:
-        uriage_instance: UriageForSyukkaJisseki = UriageForSyukkaJisseki(sumi_dict, yusyutu_dict)
-        if sumi_dict['factory_name'] == '@0001':
-            uriages_honsya.append(uriage_instance)
-            continue
-        uriages_toke.append(uriage_instance)
+    uriages = InstanceFactory.get_uriagesHonsyaToke(sumi_dicts, yusyutu_dict)
+    uriages_honsya: List["UriageForSyukkaJisseki"] = uriages[0]
+    uriages_toke: List["UriageForSyukkaJisseki"] = uriages[1]
 
     createJson = InstanceFactory.get_createJson()
-    syukkaJissekiSyoukais: List[IExcelOutput] = []
     unsouSet_col = [ 'unsou_code', 'kubun_no', 'yusyutu' ]
-    syukkaJissekiSyoukai_honsya: IExcelOutput = None
-    syukkaJissekiSyoukai_toke: IExcelOutput = None
-    # uriages_tokeに要素があったらsmiData_tokeのインスタンスを生成
+    syukkaJissekiSyoukai_honsya: Optional[IExcelOutput] = None
+    syukkaJissekiSyoukai_toke: Optional[IExcelOutput] = None
+    # uriages_tokeに要素があったらSyukkajissekiSyoukai_tokeのインスタンスを生成
     if uriages_toke:
-        syukkaJissekiSyoukai_toke = SyukkaJissekiSyoukai(uriages_toke,
-                                                         createJson,
-                                                         '@0002',
-                                                         unsouSet_col,
-                                                         createDictFromList)
-        syukkaJissekiSyoukais.append(syukkaJissekiSyoukai_toke)
+        syukkaJissekiSyoukai_toke = InstanceFactory.get_syukkaJissekiSyoukai(
+                 uriages_toke,
+                 createJson,
+                 '@0002',
+                 unsouSet_col,
+                 createDictFromList
+                 )
 
-    # uriages_honsya に要素があったらsmiData_honsyaのインスタンスを生成
+    # uriages_honsya に要素があったらSyukkaJissekiSyoukai_honsyaのインスタンスを生成
     if uriages_honsya:
-        syukkaJissekiSyoukai_honsya = \
-                                 SyukkaJissekiSyoukai(uriages_honsya, 
-                                                      createJson,
-                                                      '@0001',
-                                                      unsouSet_col,
-                                                      createDictFromList)
-        syukkaJissekiSyoukais.append(syukkaJissekiSyoukai_honsya)
-
-    exe_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoSkJsBat\ToyoKogyoSkJsBat.exe'
-
-    output_path = r'C:\Users\toyo-pc12\Desktop'
-    barcodeFolder = r'C:\Users\toyo-pc12\Desktop' 
-
-    for syukkaJissekiSyoukai in syukkaJissekiSyoukais:
-        result = syukkaJissekiSyoukai.create_tssBat(exe_path,
-                                                         output_path,
-                                                         barcodeFolder)
-        print (f'returncode= {result.returncode}')
+        syukkaJissekiSyoukai_honsya = InstanceFactory.get_syukkaJissekiSyoukai( 
+                 uriages_honsya, 
+                 createJson,
+                 '@0001',
+                 unsouSet_col,
+                 createDictFromList
+                 )
 
 
     ''' ここから業務_packing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
@@ -93,54 +148,67 @@ def start()-> None:
             createDictFromList.create_dict_from_list(sumi_for_packing_col, 
                                                      sumi_for_packing_data)
     #UriageForPackingインスタンス生成し、uriageForPackings_toke, uriageForPackings_honsyaに分ける
-    uriageForPackings_toke: List[UriageForPacking] = []
-    uriageForPackings_honsya: List[UriageForPacking] = []
-    for sumi_for_packing_dict in sumi_for_packing_dicts:
-        uriageForPacking_instance: UriageForPacking = \
-                UriageForPacking(sumi_for_packing_dict, yusyutu_dict)
-        if sumi_for_packing_dict['factory_name'] == '@0001':
-            uriageForPackings_honsya.append(uriageForPacking_instance)
-            continue
-        uriageForPackings_toke.append(uriageForPacking_instance)
+    uriagePackings: Tuple[List, List] = \
+            InstanceFactory.get_uriageForPackingsHonsyaToke(
+                    sumi_for_packing_dicts, 
+                    yusyutu_dict
+                    )
+    uriageForPackings_honsya: List["UriageForPacking"] = uriagePackings[0]
+    uriageForPackings_toke: List["UriageForPacking"] = uriagePackings[1]
 
-    createJson = InstanceFactory.get_createJson()
-    allPackings: List[IExcelOutput] = []
-    allPackings_honsya: IExcelOutput = None
-    allPackings_toke: IExcelOutput = None
-    # uriageForPacking_tokeに要素があったらsmiData_tokeのインスタンスを生成
+    allPackings_honsya: Optional[IExcelOutput] = None
+    allPackings_toke: Optional[IExcelOutput] = None
+    # uriageForPacking_tokeに要素があったらallPackings__tokeのインスタンスを生成
     if uriageForPackings_toke:
-        allPackings_toke = AllPackings(uriageForPackings_toke,
-                               createJson,
-                               '@0002',
-                               createDictFromList)
-        allPackings.append(allPackings_toke)
-    # uriageForPacking_honsyaに要素があったらsmiData_tokeのインスタンスを生成
+        allPackings_toke = InstanceFactory.get_allPackings(
+                                uriageForPackings_toke,
+                                createJson,
+                                '@0002',
+                                createDictFromList)
+    # uriageForPacking_honsyaに要素があったらallPackings_honsyaのインスタンスを生成
     if uriageForPackings_honsya:
-        allPackings_honsya = AllPackings(uriageForPackings_honsya,
+        allPackings_honsya = InstanceFactory.get_allPackings(
+                               uriageForPackings_honsya,
                                createJson,
                                '@0001',
                                createDictFromList)
-        allPackings.append(allPackings_honsya)
     
-    exe_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoPackingBat\ToyoKogyoPackingBat.exe'
-    myFolder = r'C:\Users\toyo-pc12\Desktop'
 
-    if allPackings_toke is not None:
-        result = allPackings_toke.create_tssBat(exe_path, myFolder)
+    syukkaJisseki_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoSkJsBat\ToyoKogyoSkJsBat.exe'
+    packing_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoPackingBat\ToyoKogyoPackingBat.exe'
+    output_path = mydir
+    barcodeFolder = mydir
 
-    if allPackings_honsya is not None:
-        result = allPackings_honsya.create_tssBat(exe_path, myFolder)
+    '''
+    excel_outputs_args = 
+    [{'output_name':str, 'excel_output':IExcelOutput, 'exe_path':str, 
+    'output_path':str, 'barcodeFolder':str}, {....}, {....} ]
+    '''
+
+    excel_outputs_args: List[Dict[str,Any]] = []
+
+    create_excel_outputs_args(excel_outputs_args,'出荷実績照会_本社',
+                             syukkaJissekiSyoukai_honsya, syukkaJisseki_path,
+                             output_path, barcodeFolder)
+
+    create_excel_outputs_args(excel_outputs_args,'出荷実績照会_土気',
+                             syukkaJissekiSyoukai_toke, syukkaJisseki_path,
+                             output_path, barcodeFolder)
+
+    create_excel_outputs_args(excel_outputs_args,'業務packing_本社',
+                             allPackings_honsya, packing_path,
+                             output_path, '')
+
+    create_excel_outputs_args(excel_outputs_args,'業務packing_土気',
+                             allPackings_toke, packing_path,
+                             output_path, '')
+
+
+    createTssBat:CreateTssBat = CreateTssBat(excel_outputs_args)
+    results_dic: Dict[str, int]= createTssBat.create_tssBat()
+
+    for key, val in results_dic.items():
+        print(f'{key}: returncode = {val}')
+
 
     InstanceFactory.delete_cnxn
-
-
-
-
-
-
-
-
-
-
-
-

@@ -59,6 +59,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
                     " AND RURIDT.RurTokCD < 'T6000'"
+                    " AND RURIDT.RurTokCD <> 'T0000'"
                     " ORDER BY RURIDT.RurTokCD, RURIDT.RurNonyuCD, RURIDT.RurCMNo"
                     )
 
@@ -138,6 +139,7 @@ class FetchUriageSumi(IFetchDataForList):
                     ")KBN ON RURIDT.RurFreeKBN1 = KBN.KbnCD"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
                     " AND RURIDT.RurTokCD < 'T6000'"
+                    " AND RURIDT.RurTokCD <> 'T0000'"
                     " ORDER BY RURIDT.RurTokCD, RURIDT.RurNonyuCD"
                     )
 

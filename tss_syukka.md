@@ -19,7 +19,7 @@ GitHub Publicリポジトリで公開</br>
 ### クラス図
 ```mermaid
 ---
-title: tss_syukka
+title: Interface:IFetchDataForList
 ---
 classDiagram
 direction TB 
@@ -36,8 +36,9 @@ class InstanceFactory{
     - _cnxn_tss
     - _cnxn_effit
     - _instances: Dict~str,Any
-    + _setup_sql_path()None*
-    + get_instance()instance*
+    + _setup_sql_path()None
+    + get_sql_server_tss()None
+    + etc.....
 }
 class IFetchDataForList{
     <<interface>>
@@ -56,91 +57,21 @@ class FetchUriageSumi{
 class FetchUnsoutaiouToke{
     + fetch_data()pd.DataFrame
 }
-class IExcelOutput{
-    <<interface>>
-    create_excelOutput(str, str, str="")result*
-}
-class SyukkaJissekiSyoukai{
-    - _uriages:List~UriageForSyukkaJisseki~
-    - _createJson:CreateJson
-    - _unsouSet_col:List~str~
-    - _createDictFromList:CreateDictFromDict
-    - _sumi_json_str:str
-    - _unsouSet_json_str:str
-    - _factoryName:str
-    - _syukkaKoujou:str
-    + create_excelOutput(str, str, str=""):result
-    - _create_sumi_dict(List[Dict[str,Any]])
-    - _create_sumi_json_str()str
-    - _create_unsouSet(Set[Tuple]):None
-    - _create_unsouSet_json_str()str
-}
-class AllPackings{
-    - _uriages:List~UriageForPacking~
-    - _createJson:CreateJson
-    - _factoryName
-    - _createDictFromList:CreateDictFromDict
-    - _packingForDenpyos:List~PsckingForDenpyo~
-    - _packing_json_str:str
-    + create_excelOutput(str,str,str="")result
-    - _create_packing_dict(List[Dict[str,Any]])None
-    - _create_packing_json_str()str
-}
-class PackingForDenpyo{
-    - _tokuiCD_tpl:Tuple[str,...]
-    - _uriageForPackings:List~UriageForPacking~
-    - _createJson:CreateJson
-    + create_excelOutput(str,str,str="")
-    - _create_packing_dict(List[Dict[str,Any]])None
-}
-class UriageForSyukkaJisseki{
-    - _factory
-    - _得意先コード etc...
-    - _yusyutu_dict:Dict
-    + add_sumiData_myself(List[Dict[str,Any]])None
-    + add_unsouSet_myself(Set[Tuple])None
-    - _calc_cans()int
-    - _calc_yusyutu_mukesaki()str
-}
-class UriageForPacking{
-    - _factory:str
-    - _依頼先:str
-    - _得意先コード etc...
-    - _yusyutu_dict: Dict
-    + create_setPacking(set[Tuple])None
-    + add_packingDict_myself(Tuple[str,...], Dict[Tuple[str,...], List[UriageForPacking]])
-    - _calc_cans()int
-    - _calc_yusyutu_mukesaki()str
-}
 Main --> flow
 flow --> InstanceFactory: "生成を依頼"
-flow --> IExcelOutput
-flow --> TssBat
 
 InstanceFactory --> IFetchDataForList : "戻り値の型"
 InstanceFactory --> FetchUriageSumiForPacking
 InstanceFactory --> FetchUriageSumi
 InstanceFactory --> FetchUnsoutaiouToke
-UriageForPacking <-- InstanceFactory
-UriageForSyukkaJisseki <-- InstanceFactory
 
-IExcelOutput <-- InstanceFactory : "戻り値の型"
-TssBat o--> IExcelOutput
 FetchUriageSumiForPacking ..|> IFetchDataForList
 FetchUriageSumi ..|> IFetchDataForList
 FetchUnsoutaiouToke ..|> IFetchDataForList
-SyukkaJissekiSyoukai ..|> IExcelOutput
-AllPackings ..|> IExcelOutput
-HsCoa ..|> IExcelOutput
-MhsCoa ..|> IExcelOutput
-AllPackings o--> PackingForDenpyo
-UriageForSyukkaJisseki --o SyukkaJissekiSyoukai
-UriageForPacking --o AllPackings
-UriageForPacking --o  PackingForDenpyo 
 ```
 ```mermaid
 ---
-title: tss_syukka
+title: Interface:IExcelOutput
 ---
 classDiagram
 direction TB 
@@ -157,16 +88,17 @@ class InstanceFactory{
     - _cnxn_tss
     - _cnxn_effit
     - _instances: Dict~str,Any
-    + _setup_sql_path()None*
-    + get_instance()instance*
+    + _setup_sql_path()None
+    + get_sql_server_tss()None
+    + etc.....
 }
-class TssBat{
-    - excel_output: IExcelOutput
-    + create_tssBat()result
+class CreateTssBat{
+    _ excel_outputs: List[Dict[str,Any]] 
+    "AnyにIExcelOutputを含む"
+    + create_tssBat()Dict[str,int]
 }
 class IExcelOutput{
-    <<interface>>
-    create_tssBat(str, str, str="")result*
+    + create_tssBat(str,str,str="")result
 }
 class SyukkaJissekiSyoukai{
     - _uriages:List~UriageForSyukkaJisseki~
@@ -198,7 +130,6 @@ class PackingForDenpyo{
     - _tokuiCD_tpl:Tuple[str,...]
     - _uriageForPackings:List~UriageForPacking~
     - _createJson:CreateJson
-    + create_excelOutput(str,str,str="")
     - _create_packing_dict(List[Dict[str,Any]])None
 }
 class UriageForSyukkaJisseki{
@@ -222,18 +153,15 @@ class UriageForPacking{
 }
 Main --> flow
 flow --> InstanceFactory: "生成を依頼"
-flow --> TssBat
-TssBat o--> IExcelOutput
 
 InstanceFactory --> UriageForPacking
 InstanceFactory --> UriageForSyukkaJisseki
 InstanceFactory --> SyukkaJissekiSyoukai
 InstanceFactory --> AllPackings
 InstanceFactory --> IExcelOutput: "戻り値の型"
+InstanceFactory --> CreateTssBat
 
-
-HsCoa ..|> IExcelOutput
-MhsCoa ..|> IExcelOutput
+CreateTssBat o-- IExcelOutput
 SyukkaJissekiSyoukai ..|> IExcelOutput
 AllPackings ..|> IExcelOutput
 AllPackings o--> PackingForDenpyo
@@ -242,4 +170,11 @@ UriageForPacking --o AllPackings
 UriageForPacking --o  PackingForDenpyo 
 ```
 1. flowは、InstanceFactoryからIFetchDataForListクラスのインスタンスをもらって必要なデータを得る。
-1. flowは、UriageForSyukkaJissekiのインスタンスを生成し、
+1. flowは、SyukkaJissekiSyoukai_toke, SyukkaJissekiSyoukai_honsyaのインスタンスを得る。これらインスタンスはUriageForSyukkajissekiのインスタンスのリスト(toke, honsya)を持っている。
+1. flowは、AllPackings_honsya,AllPackings_tokeのインスタンスを得る。AllPackingsはUriageForPackingのインスタンスのリストを持っている。
+1. AllPackingsは必要なUriageForPackingのインスタンスを渡して、PackingForDenpyoのインスタンスのリストを作って保持する。
+1. PackingForDenpyoインスタンスは国内は「得意先コード、納入先コード」毎に、輸出は「得意先コード、納入先コード、注番」毎に存在する。
+1. flowはHsCoa,MhsCoaクラスのインスタンスを得る。これらインスタンスはUriageForSyukkaJissekiのインスタンスのリストを持つ。
+1. SyukkaJissekiSyoukai_toke, SyukkaJissekiSyoukai_honsya,AllPackings_toke, AllPackings_toke,HsCoa,MhsCoaはIExcelOutputインターフェースの実装であり、CreateTssBatクラスが保持している。
+1. flowはCreateTssBatのインスタンスを生成し、create_tssBatメソッドを呼び出して、「出荷実績照会」、「業務_packing」、「検査成績書」を作成する。
+

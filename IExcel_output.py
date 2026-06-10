@@ -194,9 +194,3 @@ class PackingForDenpyo:
                 }
 
         packing_dicts.append(add_dict)
-
-            
-
-    def create_excelOutput(self, exe_path: str, output_path: str, barcodeFolder: str = "") -> object:
-        pass
-
