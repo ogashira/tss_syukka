@@ -28,7 +28,7 @@ class CreateDictFromList:
         return yusyutu_dict
 
 
-    def create_dict_from_list(self, col: List[str], 
+    def create_dicts_from_colAndList(self, col: List[str], 
                               data: List[List[Any]],
                               )-> List[Dict[str, Any]]:
         '''
@@ -39,6 +39,29 @@ class CreateDictFromList:
         for line in data:
             inner_dict = dict(zip(col, line))
             list_dict.append(inner_dict)
+
+        return list_dict
+
+        
+    def create_dict_from_list(self, col: List[str], 
+                              data: List[List[Any]],
+                              key_name: str,
+                              val_name: str
+                              )-> Dict[str, Any]:
+        '''
+        ２次元リストから辞書を作ってリストにする。
+        '''
+
+        key_idx: int = GetIdx.get_idx(col, key_name)
+        val_idx: int = GetIdx.get_idx(col, val_name)
+        # get_idxで-1が返ったらNG
+        if key_idx == -1 or val_idx == -1:
+            raise IndexError('create_dict_from_list GetIdx == -1 が返りました。'
+                                                          '処理を中止します。')
+
+        list_dict: Dict[str,Any] = {} 
+        for line in data:
+            list_dict[line[key_idx]] = line[val_idx]
 
         return list_dict
 

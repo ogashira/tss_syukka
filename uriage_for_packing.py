@@ -1,4 +1,6 @@
 from __future__ import annotations 
+from decimal import Decimal
+from recorder import Recorder
 '''
 全ての型ヒントの判定を遅延評価する。UriageForPacking自信のクラス名を型ヒントとして
 使っているので、エラーを出さないため。 61行目
@@ -6,28 +8,37 @@ from __future__ import annotations
 from typing import Dict, Any, Tuple, Set, List
 
 class UriageForPacking:
-    def __init__(self, dict_data: Dict[str,Any], yusyutu_dict: Dict):
+    def __init__(self, dict_data: Dict[str,Any], yusyutu_dict: Dict,
+                 productCan_dic: Dict[str,str],
+                 tnju_dic: Dict[str, Any], recorder:Recorder)-> None:
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
+        self._productCan_dic = productCan_dic
+        self._tnju_dic = tnju_dic
+        self._recorder = recorder
         self._factory: str = dict_data['factory_name']
         self._依頼先: str = dict_data['依頼先']
         self._得意先コード: str = dict_data['得意先コード']
         self._納入先コード: str = dict_data['納入先コード']
         self._納入先名称１: str = dict_data['納入先名称１']
+        self._売り品番: str = dict_data['売り品番']
         self._品名: str = dict_data['品名']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
         self._備考: str = dict_data['備考']
         self._納期: str = dict_data['納期']
         self._受注数量: int = dict_data['uriKosu']
         self._受注単位: str = dict_data['受注単位']
-        self._add: int = 1
+        self._add: int = dict_data['add']
+        self._振替元品番: str = dict_data['motoHinCD']
         self._振替元数量: int = dict_data['motoSu']
         self._売り金額: int = dict_data['uriKin']
         self._売り単価: int = dict_data['uriTnk']
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
         self._cans: int = self._calc_cans()
         self._出荷: str = self._get_factory_name() # 土気出荷、本社出荷
+        self._hinban: str = self._calc_hinban()
+        self._weight: Decimal = self._calc_weight()
 
 
     def _get_factory_name(self)-> str:
@@ -39,6 +50,30 @@ class UriageForPacking:
         if self._受注単位 != 'CN':
             return self._振替元数量
         return self._受注数量
+
+    def _calc_hinban(self)-> str:
+        if self._受注単位 != 'CN':
+            return self._振替元品番
+        return self._売り品番
+
+    def _calc_weight(self)-> Decimal:
+        weight: Decimal = Decimal('0')
+        can_name = self._productCan_dic.get(self._hinban, '')
+        can_weight = self._tnju_dic.get(can_name, Decimal('0')) 
+        net = self._tnju_dic.get(self._hinban, Decimal('0'))
+
+        if can_weight == Decimal('0'):
+            txt = f'{self._売り品番} の容器の重量が求められません'
+            self._recorder.out_log(txt)
+            self._recorder.out_file(txt)
+        if net == Decimal('0'):
+            txt = f'{self._売り品番} の重量が求められません'
+            self._recorder.out_log(txt)
+            self._recorder.out_file(txt)
+
+        weight = can_weight + net
+
+        return weight
 
     def _calc_yusyutu_mukesaki(self)-> str:
         yusyutu_mukesaki = ''
@@ -95,7 +130,7 @@ class UriageForPacking:
         tmp_dict = {
                 '依頼先':         self._依頼先,
                 'cans':           self._cans,
-                '総重量':         240,
+                '総重量':         self._weight,
                 '得意先コード':   self._得意先コード,
                 '納入先コード':   self._納入先コード,
                 '納入先名称１':   self._納入先名称１,

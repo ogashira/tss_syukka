@@ -1,10 +1,11 @@
-import pprint
+import platform
+from re import I
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Set, Tuple, TYPE_CHECKING, Optional
 from instance_factory import InstanceFactory
-from IExcel_output import IExcelOutput
+from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai
 from create_tss_bat import CreateTssBat
 
 # 実行時にはインポートせず、型チェックの為だけに書く
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from uriage_for_packing import UriageForPacking
 
 
-def create_excel_outputs_args(excel_outputs:List[Dict[str,Any]],
+def create_excel_outputs_args(excel_outputs_args:List[Dict[str,Any]],
                     output_name: str, excelOutput: Optional[IExcelOutput],
                     exe_path:str, output_path:str, barcodeFolder: str)->None:
 
@@ -26,12 +27,15 @@ def create_excel_outputs_args(excel_outputs:List[Dict[str,Any]],
     innerDic['exe_path'] = exe_path
     innerDic['output_path'] = output_path
     innerDic['barcodeFolder'] = barcodeFolder
-    excel_outputs.append(innerDic)
+    excel_outputs_args.append(innerDic)
 
 
 def make_dire(syukka_date: str)-> str:
     # 1. ベースとなるディレクトリと今日の年月日を設定
     base_dir = Path(r"\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\01出荷output_TSS_実装中")
+    if platform.system() == 'Linux':
+        base_dir = Path(r"/mnt/public/営業課ﾌｫﾙﾀﾞ/01出荷output_TSS_実装中")
+
 
     # 2. 最初のリクエストフォルダ名を作成
     target_dir = base_dir / syukka_date
@@ -86,54 +90,89 @@ def start()-> None:
     syukka_date = date_input()
 
     mydir:str = make_dire(syukka_date)
+    recorder = InstanceFactory.get_recorder(mydir)
+
+    recorder.out_file(f'出荷日：{syukka_date}', '\n')
 
     InstanceFactory.get_sql_server_effit()
 
     sumi = InstanceFactory.get_fetchUriageSumi(syukka_date)
-    sumi_col, sumi_data = sumi.fetch_data()
+    sumi_data = []
+    try:
+        sumi_col, sumi_data = sumi.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
 
     if not sumi_data:
-        print('売上データがありません。処理を中止します')
+        txt = '売上データがありません。処理を中止します'
+        recorder.out_log(txt, '\n')
+        recorder.out_file(txt, '\n')
         sys.exit(1)
 
     #unsoutaiouデータを取得
     unsoutaiou = InstanceFactory.get_fetchUnsoutaiouToke()
-    unsoutaiou_col, unsoutaiou_data = unsoutaiou.fetch_data()
+    try:
+        unsoutaiou_col, unsoutaiou_data = unsoutaiou.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
 
     #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
     createDictFromList = InstanceFactory.get_createDictFromList()
-    yusyutu_dict: Dict[Tuple,str] = \
+    try:
+        yusyutu_dict: Dict[Tuple,str] = \
             createDictFromList.create_yusyutuDict(unsoutaiou_data, 
                                                             unsoutaiou_col)
+    except IndexError as e:
+        recorder.out_log(e, '\n')
+        recorder.out_file(e, '\n')
+        sys.exit(1)
+
+
     # 出荷添付リスト(coa)を取得
     tenpCoa = InstanceFactory.get_fetchSyukkaListCoa()
-    tenpCoa_col, tenpCoa_data = tenpCoa.fetch_data()
+    try:
+        tenpCoa_col, tenpCoa_data = tenpCoa.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
 
     # 出荷添付リスト(sitei_denpyo)を取得
     tenpSiteiDenpyo = InstanceFactory.get_fetchSyukkaListSiteiDenpyo()
-    tenpSitei_col, tenpSitei_data = tenpSiteiDenpyo.fetch_data()
+    try:
+        tenpSitei_col, tenpSitei_data = tenpSiteiDenpyo.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
 
     # tenpCoa_col, tenpCoa_dataを辞書にする
     tenpCoa_dicts:List[Dict[str,Any]] = \
-            createDictFromList.create_dict_from_list(tenpCoa_col, tenpCoa_data)
+            createDictFromList.create_dicts_from_colAndList(tenpCoa_col, 
+                                                            tenpCoa_data)
 
     # tenpSitei_col, tenpSitei_dataを辞書にする
     tenpSitei_dicts:List[Dict[str,Any]] = \
-            createDictFromList.create_dict_from_list(tenpSitei_col, tenpSitei_data)
+            createDictFromList.create_dicts_from_colAndList(tenpSitei_col, 
+                                                            tenpSitei_data)
 
     #sumi_col, sumi_dataを辞書にする
     # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
     sumi_dicts:List[Dict[str,Any]] = \
-            createDictFromList.create_dict_from_list(sumi_col, sumi_data)
+            createDictFromList.create_dicts_from_colAndList(sumi_col, sumi_data)
 
     #Uriageインスタンス生成し、uriages_toke, uriages_honsyaに分ける
     uriages = InstanceFactory.get_uriagesHonsyaToke(sumi_dicts, yusyutu_dict, 
-                                                                tenpCoa_dicts)
+                                                    tenpCoa_dicts, recorder)
     uriages_honsya: List["UriageForSyukkaJisseki"] = uriages[0]
     uriages_toke: List["UriageForSyukkaJisseki"] = uriages[1]
 
 
-
+    '''SyukkaJissekiSyoukaiのインスタンス生成>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     createJson = InstanceFactory.get_createJson()
     unsouSet_col = [ 'unsou_code', 'kubun_no', 'yusyutu' ]
     syukkaJissekiSyoukai_honsya: Optional[IExcelOutput] = None
@@ -160,24 +199,68 @@ def start()-> None:
 
     ''' ここから業務_packing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     sumi_for_packing = InstanceFactory.get_fetchUriageSumiForPacking(syukka_date)
-    sumi_for_packing_col, sumi_for_packing_data = sumi_for_packing.fetch_data()
+    try:
+        sumi_for_packing_col, sumi_for_packing_data = sumi_for_packing.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
+
+    ''' productCan, tnjuデータを取得して辞書にする '''
+    productCan = InstanceFactory.get_fetchProductCan()
+    try:
+        productCan_col, productCan_data = productCan.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
+
+    tnju = InstanceFactory.get_fetchTnju()
+    try:
+        tnju_col, tnju_data = tnju.fetch_data()
+    except Exception as e:
+        recorder.out_log(f'処理を中止します：{e}', '\n')
+        recorder.out_file(f'処理を中止します: {e}', '\n')
+        sys.exit(1)
+
+    try:
+        productCan_dic:Dict[str,Any] = \
+            createDictFromList.create_dict_from_list(productCan_col, 
+                                                     productCan_data, 
+                                                     '親品番', 
+                                                     '子品番')
+        tnju_dic:Dict[str,Any] = \
+            createDictFromList.create_dict_from_list(tnju_col, 
+                                                     tnju_data,
+                                                     'hinban',
+                                                     'tnju')
+    except IndexError as e:
+        recorder.out_log(e, '\n')
+        recorder.out_file(e, '\n')
+        sys.exit(1)
 
 
     #sumi_for_packing_col, sumi_for_packing_dataを辞書にする
     # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
     sumi_for_packing_dicts:List[Dict[str,Any]] = \
-            createDictFromList.create_dict_from_list(sumi_for_packing_col, 
+            createDictFromList.create_dicts_from_colAndList(
+                                                     sumi_for_packing_col, 
                                                      sumi_for_packing_data)
     #UriageForPackingインスタンス生成し、uriageForPackings_toke, uriageForPackings_honsyaに分ける
     uriagePackings: Tuple[List, List] = \
             InstanceFactory.get_uriageForPackingsHonsyaToke(
                     sumi_for_packing_dicts, 
-                    yusyutu_dict
+                    yusyutu_dict,
+                    productCan_dic,
+                    tnju_dic,
+                    recorder
                     )
+
     uriageForPackings_honsya: List["UriageForPacking"] = uriagePackings[0]
     uriageForPackings_toke: List["UriageForPacking"] = uriagePackings[1]
 
-
+    '''AllPackingsのインスタンスを生成>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    PackingForDenpyoはAllPackingの中で生成する'''
     allPackings_honsya: Optional[IExcelOutput] = None
     allPackings_toke: Optional[IExcelOutput] = None
     # uriageForPacking_tokeに要素があったらallPackings__tokeのインスタンスを生成
@@ -195,9 +278,48 @@ def start()-> None:
                                '@0001',
                                createDictFromList)
     
+    '''ここから検査成績書>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
+    #dic_uriages_for_coa = 
+    #{'koito': [........], 'metal': [......], 'nonMetal': [.......]} 
+    dic_uriages_for_coa: Dict[str, List[UriageForSyukkaJisseki]] = {}
+    dic_uriages_for_coa['koito'] = []
+    dic_uriages_for_coa['metal'] = []
+    dic_uriages_for_coa['nonMetal'] = []
+    if syukkaJissekiSyoukai_honsya is not None:
+        if isinstance(syukkaJissekiSyoukai_honsya, SyukkaJissekiSyoukai):
+            syukkaJissekiSyoukai_honsya.collect_uriage_for_coa(dic_uriages_for_coa)
+    if syukkaJissekiSyoukai_toke is not None:
+        if isinstance(syukkaJissekiSyoukai_toke, SyukkaJissekiSyoukai):
+            syukkaJissekiSyoukai_toke.collect_uriage_for_coa(dic_uriages_for_coa)
+    '''
+    syukkaJissekiSyoukai_tokeはIExcelOutputインターフェース型として宣言しているの
+    で、collect_uriage_for_coaメソッドはインターフェースには無いためエラーになる。
+    そこで、if isinstanceでSyukkaJissekiSyoukai型としてpyrightに認識させる。
+    '''
+    hsCoas: List[IExcelOutput] = []
+    if dic_uriages_for_coa['nonMetal']:
+        for uriage in dic_uriages_for_coa['nonMetal']:
+            hsCoas.append(InstanceFactory.get_hsCoa(uriage))
+    mhsCoas: List[IExcelOutput] = []
+    if dic_uriages_for_coa['metal']:
+        for uriage in dic_uriages_for_coa['metal']:
+            mhsCoas.append(InstanceFactory.get_mhsCoa(uriage))
+    koitoCoas: List[IExcelOutput] = []
+    if dic_uriages_for_coa['koito']:
+        for uriage in dic_uriages_for_coa['koito']:
+            koitoCoas.append(InstanceFactory.get_koitoCoa(uriage))
 
+
+    '''
+    syukkaJissekiSyoukai_, allPackings_, hsCoa, mhsCoa, koitoCoa用の
+    引数を作って、excel_outputs_argsに詰めていく
+    '''
+            
     syukkaJisseki_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoSkJsBat\ToyoKogyoSkJsBat.exe'
     packing_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoPackingBat\ToyoKogyoPackingBat.exe'
+    hs_coa_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoHsRepBat\ToyoKogyoHsRepBat.exe'
+    mhs_coa_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoMhsRepBat\ToyoKogyoMhsRepBat.exe'
+    koito_coa_path = ''
     output_path = mydir
     barcodeFolder = mydir
 
@@ -225,17 +347,37 @@ def start()-> None:
                              allPackings_toke, packing_path,
                              output_path, '')
 
+    if hsCoas:
+        for hsCoa in hsCoas:
+            create_excel_outputs_args(excel_outputs_args,
+                                      '品管シートCoa',
+                                      hsCoa, hs_coa_path,
+                                      output_path, 
+                                      barcodeFolder)
+    if mhsCoas:
+        for mhsCoa in mhsCoas:
+            create_excel_outputs_args(excel_outputs_args,
+                                      '品管シートCoa',
+                                      mhsCoa, mhs_coa_path,
+                                      output_path, 
+                                      barcodeFolder)
+    if koitoCoas:
+        for koitoCoa in koitoCoas:
+            create_excel_outputs_args(excel_outputs_args,
+                                      '品管シートCoa',
+                                      koitoCoa, koito_coa_path,
+                                      output_path, 
+                                      barcodeFolder)
 
-    createTssBat:CreateTssBat = CreateTssBat(excel_outputs_args)
-    results_dic: Dict[str, int]= createTssBat.create_tssBat()
+    '''
+    Contextクラス(CreateTssBat)にexcel_outputs_argsを渡して、
+    アウトプットを作ってもらう
+    '''
+    recorder.out_log('', '\n')
+    recorder.out_file('', '\n')
 
-    
-
-    for key, val in results_dic.items():
-        print(f'{key}: returncode = {val}')
-
-    if not results_dic:
-        print('NoData')
+    createTssBat:CreateTssBat = CreateTssBat(excel_outputs_args, recorder)
+    createTssBat.create_tssBat()
 
 
     InstanceFactory.delete_cnxn

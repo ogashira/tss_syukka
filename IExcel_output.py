@@ -78,6 +78,11 @@ class SyukkaJissekiSyoukai(IExcelOutput):
 
     def create_tssBat(self, exe_path: str, output_path: str, 
                            barcodeFolder: str = "")->object:
+
+        result:object = None
+        if self._unsouSet_json_str == '[]':
+            return result
+
         args = [
                 self._unsouSet_json_str,
                 self._sumi_json_str,
@@ -92,10 +97,16 @@ class SyukkaJissekiSyoukai(IExcelOutput):
         return result
 
 
-    # TODO
-    def add_mksk(self, mksk_list:List[str])-> None:
+    def collect_uriage_for_coa(self,
+        dic_uriages_for_coa: Dict[str,List['UriageForSyukkaJisseki']])-> None:
+        '''
+        dic_uriages_for_coa = 
+        {'koito':[........], 'metal': [......], 'nonMetal': [.......]} 
+        mkskがあるuriage_for_syukkaJissekiを集めて
+        dic_uriages_for_coaに入れる
+        '''
         for uriage in self._uriages:
-            uriage.add_mksk(mksk_list)
+            uriage.add_myself_for_coa(dic_uriages_for_coa)
 
 
 
@@ -130,7 +141,7 @@ class AllPackings(IExcelOutput):
         # PackingForDenpyoのインスタンスを作る
         self._packingForDenpyos: List[PackingForDenpyo] = []
         for key_tuple, val_list in packingDict.items():
-            packingForDenpyo: IExcelOutput = \
+            packingForDenpyo: PackingForDenpyo = \
                     PackingForDenpyo(key_tuple, val_list, createJson)
             self._packingForDenpyos.append(packingForDenpyo)
 
@@ -159,7 +170,7 @@ class AllPackings(IExcelOutput):
         args = [
                 output_path,
                 self._packing_json_str,
-                self._factoryName,
+                self._factoryName
                 ]
 
         result = subprocess.run([exe_path] + args, capture_output=True, text=True)
@@ -199,3 +210,44 @@ class PackingForDenpyo:
                 }
 
         packing_dicts.append(add_dict)
+
+
+
+class HsCoa(IExcelOutput):
+
+    def __init__(self, nonMetal: "UriageForSyukkaJisseki")-> None:
+        self._nonMetal = nonMetal
+
+    def create_tssBat(self, exe_path: str, 
+                           output_path: str, 
+                           barcodeFolder: str = "")->object:
+
+        result: object = self._nonMetal.create_hsCoa(exe_path,
+                                                       output_path)
+        return result
+
+
+
+class MhsCoa(IExcelOutput):
+
+    def __init__(self, metal: "UriageForSyukkaJisseki")-> None:
+        self._metal = metal
+
+    def create_tssBat(self, exe_path: str, 
+                           output_path: str, 
+                           barcodeFolder: str = "")->object:
+
+        result: object = self._metal.create_mhsCoa(exe_path,
+                                                       output_path)
+        return result
+
+
+class KoitoCoa(IExcelOutput):
+
+    def __init__(self, nonMetal: "UriageForSyukkaJisseki")-> None:
+        self._nonMetals = nonMetal
+
+    def create_tssBat(self, exe_path: str, 
+                           output_path: str, 
+                           barcodeFolder: str = "")->object:
+        print('koitoCoa created')

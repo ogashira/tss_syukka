@@ -37,6 +37,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " RURIHD.RurUnsCD AS 'unsouCD',"
                     " MA_UNS.aitNam1 AS '依頼先',"
                     " RURIDT.RurNODay AS '納期',"
+                    " RURIDT.RurHinCD AS '売り品番',"
                     " RURIDT.RurHinNam AS '品名',"
                     " RURIDT.RurKoSu AS 'uriKosu',"
                     " RURIDT.RurKanriTniCD AS '受注単位',"
@@ -46,7 +47,8 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " RURIDT.RurUriTnk AS 'uriTnk',"
                     " RURIDT.RurUriKin AS 'uriKin',"
                     " RURIDT.RurMBiko AS '備考',"
-                    " RURIDT.RurKojFrom AS 'factory_name'"
+                    " RURIDT.RurKojFrom AS 'factory_name',"
+                    " RJYUCD.RjcFree1 AS 'add'"
                     " From dbo.RURIDT"
                     " JOIN dbo.RURIHD"
                     " ON RURIDT.RurUNo = RURIHD.RurUNo" 
@@ -58,6 +60,9 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                         " FROM dbo.MAITEM"
                         " WHERE MAITEM.AitAitKBN = 'A'" # A = 運送屋
                     ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
+                    " LEFT JOIN dbo.RJYUCD"
+                    " ON RURIDT.RurJCNo = RJYUCD.RjcJCNo" 
+                    " AND RURIDT.RurJGNo = RJYUCD.RjcJGNo"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
                     " AND RURIDT.RurTokCD < 'T6000'"
                     " AND RURIDT.RurTokCD <> 'T0000'"
@@ -75,8 +80,8 @@ class FetchUriageSumiForPacking(IFetchDataForList):
         # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
         try:
             data_list = [list(row) for row in cursor.fetchall()]
-        except Exception:
-            print(f'データベースfetch中に予期せぬエラーです fetch_hinban')
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchUriageSumiForPacking') from e
         finally:
             cursor.close()
             # cnxnは呼び出しもとでクローズ
@@ -111,7 +116,7 @@ class FetchUriageSumi(IFetchDataForList):
                     " RURIHD.RurNonyuNam1 AS '納入先名称１',"
                     " RURIDT.RurCMNo AS '得意先注文ＮＯ',"
                     " RURIDT.RurMBiko AS '備考',"
-                    " RURIDT.RurFree8 AS 'add',"  # TODO 後で直す
+                    " RJYUCD.RjcFree1 AS 'add',"  
                     " RURMEI.RmeKojFrom AS 'factory_name',"
                     " MA_NONYU.AitRyaku AS '納入先名',"
                     " RURMEI_U2002.RmeMHinCD AS 'motoHinCD',"
@@ -140,6 +145,9 @@ class FetchUriageSumi(IFetchDataForList):
                         " FROM dbo.MKUBUN"
                         " WHERE MKUBUN.KbnKBN = 'V'" # V = 配送区分
                     ")KBN ON RURIDT.RurFreeKBN1 = KBN.KbnCD"
+                    " LEFT JOIN dbo.RJYUCD"
+                    " ON RURIDT.RurJCNo = RJYUCD.RjcJCNo" 
+                    " AND RURIDT.RurJGNo = RJYUCD.RjcJGNo"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
                     " AND RURIDT.RurTokCD < 'T6000'"
                     " AND RURIDT.RurTokCD <> 'T0000'"
@@ -157,8 +165,85 @@ class FetchUriageSumi(IFetchDataForList):
         # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
         try:
             data_list = [list(row) for row in cursor.fetchall()]
-        except Exception:
-            print(f'データベースfetch中に予期せぬエラーです fetch_hinban')
+        except Exception as e:
+            raise Exception (f'データベースfetch中に予期せぬエラーです FetchUriageSumi') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+
+
+class FetchProductCan(IFetchDataForList):
+    # PSマスタの品目１がGK(缶)のやつ
+
+    def __init__(self, cnxn) -> None:
+        self.cnxn = cnxn
+        
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT MPSMST.PsmHinCDO AS '親品番',"
+                    " MPSMST.PsmHinCDK AS '子品番'"
+                    " From dbo.MPSMST"
+                    " LEFT JOIN dbo.MHINCD"
+                    " ON MPSMST.PsmHinCDK = MHINCD.HinHinCD" 
+                    " WHERE MHINCD.HinMokCD1 = 'GK'"
+                    " ORDER BY MPSMST.PsmHinCDO"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchProductCan') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+
+
+class FetchTnju(IFetchDataForList):
+
+    def __init__(self, cnxn) -> None:
+        self.cnxn = cnxn
+        
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT MHINCD.HinHinCD AS 'hinban',"
+                    " MHINCD.HinTju AS 'tnju'"
+                    " From dbo.MHINCD"
+                    " WHERE MHINCD.HinTniCD = 'CN'"
+                    " ORDER BY MHINCD.HinHinCD"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchTnju') from e
         finally:
             cursor.close()
             # cnxnは呼び出しもとでクローズ
@@ -183,15 +268,12 @@ class FetchUnsoutaiouToke(IFetchDataForList):
                 reader = csv.reader(f)
                 data = [row for row in reader]
         except Exception as e:
-            print('unsoutaiou_tokeのfetchに失敗です')
-            print(e)
+            raise Exception('unsoutaiou_tokeのfetchに失敗です') from e
 
         columns = data[0]
         data_list = data[1:]
             
-
         return columns, data_list
-
 
 
 class FetchSyukkaListCoa(IFetchDataForList):
@@ -215,8 +297,7 @@ class FetchSyukkaListCoa(IFetchDataForList):
             data = [list(row) for row in ws.iter_rows(min_row = 2, values_only=True)]
 
         except Exception as e:
-            print('出荷時添付リスト(成績書)のfetchに失敗です')
-            print(e)
+            raise Exception('出荷時添付リスト(成績書)のfetchに失敗です') from e
 
         columns = data[0]
         data_list = data[1:]
@@ -245,8 +326,7 @@ class FetchSyukkaListSiteiDenpyo(IFetchDataForList):
             data = [list(row) for row in ws.iter_rows(min_row = 2, values_only=True)]
 
         except Exception as e:
-            print('出荷時添付リスト(指定伝票)のfetchに失敗です')
-            print(e)
+            raise Exception('出荷時添付リスト(指定伝票)のfetchに失敗です') from e
 
         columns = data[0]
         data_list = data[1:]

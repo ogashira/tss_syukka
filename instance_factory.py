@@ -1,7 +1,8 @@
 from typing import Dict, TYPE_CHECKING, Any, List, Tuple
 import platform
 import sys
-from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
+from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings, \
+        HsCoa, MhsCoa, KoitoCoa
 from fetch_data_for_list import IFetchDataForList
 
 # 実行時にはインポートせず、型チェックの為だけに書く
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
     from create_dict_from_list import CreateDictFromList
     from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
     from uriage_for_packing import UriageForPacking
+    from recorder import Recorder
 
 
 class InstanceFactory:
@@ -51,11 +53,12 @@ class InstanceFactory:
             cls._sqlServerTss = SqlServerTss()
             cls._cnxn_tss = cls._sqlServerTss.get_cnxn()
 
+    # TODO テストが終わったら、sql_server_testをsql_serverに戻す
     @classmethod
     def get_sql_server_effit(cls) -> None:
         if cls._sqlServerEffit is None:
             cls._setup_sql_path()
-            from sql_server import SqlServer as SqlServerEffit
+            from sql_server_test import SqlServer as SqlServerEffit
             cls._sqlServerEffit = SqlServerEffit()
             cls._cnxn_effit = cls._sqlServerEffit.get_cnxn()
 
@@ -65,6 +68,15 @@ class InstanceFactory:
             cls._sqlServerTss.close()
         if cls._sqlServerEffit:
             cls._sqlServerEffit.close()
+
+
+    @classmethod
+    def get_recorder(cls, mydir) -> "Recorder":
+        from recorder import Recorder
+        ins_name: str = 'recorder'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = Recorder(mydir)
+        return cls._instances[ins_name]
 
 
     @classmethod
@@ -117,6 +129,24 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchProductCan(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchProductCan
+        ins_name: str = 'fetchProductCan'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchProductCan(cls._cnxn_effit)
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_fetchTnju(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchTnju
+        ins_name: str = 'fetchTnju'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchTnju(cls._cnxn_effit)
+        return cls._instances[ins_name]
+
+
+    @classmethod
     def get_createJson(cls) -> "CreateJson":
         from create_json import CreateJson
         ins_name: str = 'createJson'
@@ -135,19 +165,11 @@ class InstanceFactory:
 
 
     @classmethod
-    def get_listToDict(cls) -> "ListToDict":
-        from list_to_dict import ListToDict
-        ins_name: str = 'listToDict'
-        if ins_name not in cls._instances:
-            cls._instances[ins_name] = ListToDict()
-        return cls._instances[ins_name]
-
-
-    @classmethod
     def get_uriagesHonsyaToke(cls, 
                                 sumi_dicts: List[Dict[str,Any]],
                                 yusyutu_dict: Dict[Tuple,str],
-                                tenpCoa_dicts: List[Dict[str,Any]]) -> Tuple:
+                                tenpCoa_dicts: List[Dict[str,Any]],
+                                recorder: "Recorder") -> Tuple:
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         # sumi_dicts = [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
         # tenpCoa_dicts =[{'得意先ｺｰﾄﾞ':'T1020', '納入先コード':None, .....},{.....}....] 
@@ -160,7 +182,7 @@ class InstanceFactory:
             for sumi_dict in sumi_dicts:
                 uriage_instance: UriageForSyukkaJisseki = \
                         UriageForSyukkaJisseki(sumi_dict, 
-                                            yusyutu_dict, tenpCoa_dicts)
+                                    yusyutu_dict, tenpCoa_dicts, recorder)
                 if sumi_dict['factory_name'] == '@0001':
                     uriages_honsya.append(uriage_instance)
                     continue
@@ -191,7 +213,10 @@ class InstanceFactory:
     @classmethod
     def get_uriageForPackingsHonsyaToke(cls, 
                                 sumi_for_packing_dicts: List[Dict[str,Any]],
-                                yusyutu_dict: Dict[Tuple,str]) -> Tuple:
+                                yusyutu_dict: Dict[Tuple,str],
+                                productCan_dic: Dict[str,str],
+                                tnju_dic: Dict[str,Any], 
+                                recorder: "Recorder") -> Tuple:
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
         from uriage_for_packing import UriageForPacking
@@ -201,7 +226,11 @@ class InstanceFactory:
         if ins_name not in cls._instances:
             for sumi_for_packing_dict in sumi_for_packing_dicts:
                 uriageForPacking_instance: UriageForPacking = \
-                        UriageForPacking(sumi_for_packing_dict, yusyutu_dict)
+                        UriageForPacking(sumi_for_packing_dict, 
+                                         yusyutu_dict,
+                                         productCan_dic,
+                                         tnju_dic,
+                                         recorder)
                 if sumi_for_packing_dict['factory_name'] == '@0001':
                     uriageForPackings_honsya.append(uriageForPacking_instance)
                     continue
@@ -230,3 +259,28 @@ class InstanceFactory:
         return  allPackings
 
     
+    @classmethod
+    def get_hsCoa(cls, uriage: "UriageForSyukkaJisseki"
+                         ) -> IExcelOutput:
+
+        hsCoa: HsCoa = HsCoa(uriage)
+
+        return  hsCoa
+
+    
+    @classmethod
+    def get_mhsCoa(cls, uriage: "UriageForSyukkaJisseki"
+                         ) -> IExcelOutput:
+
+        mhsCoa: MhsCoa = MhsCoa(uriage)
+
+        return  mhsCoa
+
+    
+    @classmethod
+    def get_koitoCoa(cls, uriage: "UriageForSyukkaJisseki"
+                         ) -> IExcelOutput:
+
+        koitoCoa: KoitoCoa = KoitoCoa(uriage)
+
+        return  koitoCoa

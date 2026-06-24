@@ -12,7 +12,7 @@
 GitHub Publicリポジトリで公開</br>
 [GitHub_ https://github.com/ogashira/tss_syukka](https://github.com/ogashira/tss_syukka)
 ### 起動方法
-##### soukoidou
+##### tss_syukka
 - `Winボタン+R -> tss_syukka入力 -> Enter`または`cmdにて、 pushd \\wsl$\Ubuntu\home\oga\projects\tss_syukka\`デイレクトリ内にて`python main.py`で実行
 ### 動作
 

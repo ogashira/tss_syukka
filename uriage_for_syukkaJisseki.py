@@ -1,14 +1,19 @@
+from __future__ import annotations 
+import subprocess
 from typing import Dict, Any, Tuple, Set, List, Optional
 from get_idx import GetIdx
+from recorder import Recorder
 
 class UriageForSyukkaJisseki:
     def __init__(self, dict_data: Dict[str,Any], 
                  yusyutu_dict: Dict,
-                 tenpCoa_dicts: List[Dict[str, Any]])-> None:
+                 tenpCoa_dicts: List[Dict[str, Any]],
+                 recorder: Recorder)-> None:
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
         self._tenpCoa_dicts = tenpCoa_dicts
+        self._recorder = recorder
         self._factory: str = dict_data['factory_name']
         self._得意先コード: str = dict_data['得意先コード']
         self._納入先コード: str = dict_data['納入先コード']
@@ -25,19 +30,25 @@ class UriageForSyukkaJisseki:
         self._納入先名称１: str = dict_data['納入先名称１']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
         self._備考: str = dict_data['備考']
-        self._add: int = 1
+        self._add: int = dict_data['add']
         self._納入先名: str = dict_data['納入先名']
         self._motoHinCD: str = dict_data['motoHinCD']
         self._motoTni: str = dict_data['motoTni']
         self._振替元数量: int = dict_data['振替元数量']
         self._cans: int = self._calc_cans()
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
+        self._hinban_for_coa: str = self._get_hinban_for_coa()
         self._coa_mksk: str = self._get_mksk()
 
 
-    # TODO
-    def add_mksk(self, mksk_list:List[str])-> None:
-        mksk_list.append(self._coa_mksk)
+
+    def _get_hinban_for_coa(self)-> str:
+        hinban_for_coa: str = ''
+        if self._受注単位 == 'CN':
+            hinban_for_coa = self._hinban
+        if self._motoTni == 'CN':
+            hinban_for_coa = self._motoHinCD
+        return hinban_for_coa
 
 
     def _get_mksk(self)-> str:
@@ -50,20 +61,9 @@ class UriageForSyukkaJisseki:
             
             tenpCoa_hinban: str = line_dic['品番']
 
-            '''
-            このインスタンスの品番は、受注単位がCNならhinbanだが、それ以外は
-            motoHinCDが該当する
-            '''
-            this_instance_hinban:str = ''
-            if self._受注単位 == 'CN':
-                this_instance_hinban = self._hinban
-            if self._motoTni == 'CN':
-                this_instance_hinban = self._motoHinCD
-
-
             if (tokuiCD == self._得意先コード and
                 nonyuCD == self._納入先コード and
-                tenpCoa_hinban == this_instance_hinban):
+                tenpCoa_hinban == self._hinban_for_coa):
                 mksk = line_dic['format']
 
         return mksk
@@ -122,3 +122,68 @@ class UriageForSyukkaJisseki:
         tmpTuple = (self._unsou_code, self._kubun_no, self._輸出向先)
         unsouSet.add(tmpTuple)
 
+
+    def add_myself_for_coa(self, 
+            dic_uriages_for_coa: Dict[str,List[UriageForSyukkaJisseki]])-> None:
+        if self._coa_mksk == '':
+            return 
+        if self._coa_mksk == '小糸':
+            dic_uriages_for_coa['koito'].append(self)
+            return
+        if self._coa_mksk == 'ﾒﾀﾙ':
+            dic_uriages_for_coa['metal'].append(self)
+            return
+
+        dic_uriages_for_coa['nonMetal'].append(self)
+
+
+    def create_hsCoa(self, exe_path: str,
+                      output_path: str) -> object:
+        '''
+        HsCoaから呼ばれる。
+        成績書を作る
+        '''
+        args = [
+                "--mksk", self._coa_mksk,
+                "--lot", self._lot,
+                "--outputdir", output_path
+                ]
+
+        result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+        if result.returncode == 1:
+            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物ではありません' 
+        elif result.returncode == 2:
+            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物NG です！' 
+        else:
+            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 成績書作成できません！' 
+
+        self._recorder.out_log(txt)
+        self._recorder.out_file(txt)
+
+        return result
+
+
+    def create_mhsCoa(self, exe_path: str,
+                      output_path: str) -> object:
+        '''
+        MhsCoaから呼ばれる。
+        成績書を作る
+        '''
+        args = [
+                "--lot", self._lot,
+                "--outputdir", output_path
+                ]
+
+        result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+
+        if result.returncode == 1:
+            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物ではありません' 
+        elif result.returncode == 2:
+            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物NG です！' 
+        else:
+            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 成績書作成できません！' 
+
+        self._recorder.out_log(txt, '\n')
+        self._recorder.out_file(txt, '\n')
+
+        return result
