@@ -1,8 +1,11 @@
 from __future__ import annotations 
+import glob
+import shutil
 import subprocess
 from typing import Dict, Any, Tuple, Set, List, Optional
 from get_idx import GetIdx
 from recorder import Recorder
+from check_hatumono import CheckHatumono
 
 class UriageForSyukkaJisseki:
     def __init__(self, dict_data: Dict[str,Any], 
@@ -19,7 +22,7 @@ class UriageForSyukkaJisseki:
         self._納入先コード: str = dict_data['納入先コード']
         self._unsou_code: str = dict_data['unsou_code'] 
         self._unsou: str = dict_data['unsou']
-        self._kubun_no: str = dict_data['kubun_no']
+        self._kubun_no: int = int(dict_data['kubun_no']) # TSSアウトプットの引数がintなので
         self._kubun: str = dict_data['kubun']
         self._出荷予定日: str = dict_data['出荷予定日']
         self._hinban: str = dict_data['hinban'] # S6-SV3800-1-U, S6-UV361-U
@@ -30,10 +33,10 @@ class UriageForSyukkaJisseki:
         self._納入先名称１: str = dict_data['納入先名称１']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
         self._備考: str = dict_data['備考']
-        self._add: int = dict_data['add']
+        self._add: int = 0 #dict_data['add']
         self._納入先名: str = dict_data['納入先名']
-        self._motoHinCD: str = dict_data['motoHinCD']
-        self._motoTni: str = dict_data['motoTni']
+        self._motoHinCD: str = dict_data['motoHinCD'] # 振替元品番
+        self._motoTni: str = dict_data['motoTni']     # 振替元単位
         self._振替元数量: int = dict_data['振替元数量']
         self._cans: int = self._calc_cans()
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
@@ -138,52 +141,93 @@ class UriageForSyukkaJisseki:
 
 
     def create_hsCoa(self, exe_path: str,
-                      output_path: str) -> object:
+                     output_path: str,
+                     checkHatumono: CheckHatumono) -> None:
         '''
         HsCoaから呼ばれる。
         成績書を作る
         '''
-        args = [
-                "--mksk", self._coa_mksk,
-                "--lot", self._lot,
-                "--outputdir", output_path
-                ]
+        if self._coa_mksk == '小糸' or self._coa_mksk == 'ﾒﾀﾙ':
+            return
 
-        result = subprocess.run([exe_path] + args, capture_output=True, text=True)
-        if result.returncode == 1:
-            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物ではありません' 
-        elif result.returncode == 2:
-            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物NG です！' 
-        else:
-            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 成績書作成できません！' 
+        is_metal: bool = False
+        could_copy_coa: bool = checkHatumono.copy_coa(self._lot, 
+                                          self._coa_mksk, output_path, is_metal)
+
+        txt = f'{self._coa_mksk}向け成績書 {self._hinban_for_coa}({self._lot})をフォルダにコピーしました。\n'
+        if not could_copy_coa:
+            txt = f'{self._coa_mksk}向け成績書 {self._hinban_for_coa}({self._lot})が無いので作成します。\n'
+            args = [
+                    "--mksk", self._coa_mksk,
+                    "--lot", self._lot,
+                    "--outputdir", output_path
+                    ]
+
+            result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+            if result.returncode == 1:
+                add_txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物ではありません\n' 
+            elif result.returncode == 2:
+                add_txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物NG です！\n' 
+            else:
+                add_txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 成績書作成できません！\n' 
+            txt = f'{txt}{add_txt}'
+            
 
         self._recorder.out_log(txt)
         self._recorder.out_file(txt)
 
-        return result
-
 
     def create_mhsCoa(self, exe_path: str,
-                      output_path: str) -> object:
+                      output_path: str,
+                      checkHatumono: CheckHatumono) -> None:
         '''
         MhsCoaから呼ばれる。
         成績書を作る
         '''
-        args = [
-                "--lot", self._lot,
-                "--outputdir", output_path
-                ]
+        if self._coa_mksk != 'ﾒﾀﾙ':
+            return
 
-        result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+        is_metal: bool = True
+        could_copy_coa: bool = checkHatumono.copy_coa(self._lot, 
+                                          self._coa_mksk, output_path, is_metal)
 
-        if result.returncode == 1:
-            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物ではありません' 
-        elif result.returncode == 2:
-            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物NG です！' 
-        else:
-            txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 成績書作成できません！' 
+        txt = f'{self._coa_mksk}向け成績書 {self._hinban_for_coa}({self._lot})をフォルダにコピーしました。\n'
+        if not could_copy_coa:
+            txt = f'{self._coa_mksk}向け成績書 {self._hinban_for_coa}({self._lot})が無いので作成します。\n'
+
+            args = [
+                    "--lot", self._lot,
+                    "--outputdir", output_path
+                    ]
+
+            result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+
+            if result.returncode == 1:
+                add_txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物ではありません\n' 
+            elif result.returncode == 2:
+                add_txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 初物NG です！\n' 
+            else:
+                add_txt = f'{self._hinban_for_coa} {self._lot} {self._coa_mksk}: 成績書作成できません！\n' 
+            txt = f'{txt}{add_txt}'
+
 
         self._recorder.out_log(txt, '\n')
         self._recorder.out_file(txt, '\n')
 
-        return result
+
+    def create_koitoCoa(self, output_path: str,
+                        checkHatumono: CheckHatumono)-> None:
+
+        if self._coa_mksk != '小糸':
+            return
+
+        is_metal: bool = False
+        could_copy_coa: bool = checkHatumono.copy_coa(self._lot, 
+                                          self._coa_mksk, output_path, is_metal)
+
+        txt = f'{self._coa_mksk}向け成績書 {self._hinban_for_coa}({self._lot})をフォルダにコピーしました。\n'
+        if not could_copy_coa:
+            txt = f'{self._coa_mksk}向け成績書 {self._hinban_for_coa}({self._lot})がありません。技術部に依頼してください!\n'
+
+        self._recorder.out_log(txt, '\n')
+        self._recorder.out_file(txt, '\n')

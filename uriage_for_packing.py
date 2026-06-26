@@ -29,7 +29,10 @@ class UriageForPacking:
         self._納期: str = dict_data['納期']
         self._受注数量: int = dict_data['uriKosu']
         self._受注単位: str = dict_data['受注単位']
-        self._add: int = dict_data['add']
+        add: int = 0
+        if not (dict_data['add'] == ' ' or dict_data['add'] == ''):
+            add = int(dict_data['add'])
+        self._add: int = add  # 空白なら0, それ以外はintにキャストする
         self._振替元品番: str = dict_data['motoHinCD']
         self._振替元数量: int = dict_data['motoSu']
         self._売り金額: int = dict_data['uriKin']

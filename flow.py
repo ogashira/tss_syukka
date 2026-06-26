@@ -12,6 +12,7 @@ from create_tss_bat import CreateTssBat
 if TYPE_CHECKING:
     from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
     from uriage_for_packing import UriageForPacking
+    from check_hatumono import CheckHatumono
 
 
 def create_excel_outputs_args(excel_outputs_args:List[Dict[str,Any]],
@@ -81,7 +82,10 @@ def date_input()-> str:
             print("エラー: 正しい日付（数字のみ）を入力してください。")
 
     # ループを抜けた後の処理
+    print()
     print(f"正しい出荷日を受け付けました: {syukka_date}")
+    print()
+    print()
     return syukka_date
 
 
@@ -184,7 +188,8 @@ def start()-> None:
                  createJson,
                  '@0002',
                  unsouSet_col,
-                 createDictFromList
+                 createDictFromList,
+                 recorder
                  )
 
     # uriages_honsya に要素があったらSyukkaJissekiSyoukai_honsyaのインスタンスを生成
@@ -194,7 +199,8 @@ def start()-> None:
                  createJson,
                  '@0001',
                  unsouSet_col,
-                 createDictFromList
+                 createDictFromList,
+                 recorder
                  )
 
     ''' ここから業務_packing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
@@ -240,6 +246,10 @@ def start()-> None:
         sys.exit(1)
 
 
+    ''' cnxnの消去>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
+    InstanceFactory.delete_cnxn
+    '''>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
+
     #sumi_for_packing_col, sumi_for_packing_dataを辞書にする
     # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
     sumi_for_packing_dicts:List[Dict[str,Any]] = \
@@ -269,14 +279,16 @@ def start()-> None:
                                 uriageForPackings_toke,
                                 createJson,
                                 '@0002',
-                                createDictFromList)
+                                createDictFromList,
+                                recorder)
     # uriageForPacking_honsyaに要素があったらallPackings_honsyaのインスタンスを生成
     if uriageForPackings_honsya:
         allPackings_honsya = InstanceFactory.get_allPackings(
                                uriageForPackings_honsya,
                                createJson,
                                '@0001',
-                               createDictFromList)
+                               createDictFromList,
+                               recorder)
     
     '''ここから検査成績書>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     #dic_uriages_for_coa = 
@@ -296,18 +308,20 @@ def start()-> None:
     で、collect_uriage_for_coaメソッドはインターフェースには無いためエラーになる。
     そこで、if isinstanceでSyukkaJissekiSyoukai型としてpyrightに認識させる。
     '''
+    checkHatumono: "CheckHatumono" = InstanceFactory.get_checkHatumono()
+
     hsCoas: List[IExcelOutput] = []
     if dic_uriages_for_coa['nonMetal']:
         for uriage in dic_uriages_for_coa['nonMetal']:
-            hsCoas.append(InstanceFactory.get_hsCoa(uriage))
+            hsCoas.append(InstanceFactory.get_hsCoa(uriage, checkHatumono))
     mhsCoas: List[IExcelOutput] = []
     if dic_uriages_for_coa['metal']:
         for uriage in dic_uriages_for_coa['metal']:
-            mhsCoas.append(InstanceFactory.get_mhsCoa(uriage))
+            mhsCoas.append(InstanceFactory.get_mhsCoa(uriage, checkHatumono))
     koitoCoas: List[IExcelOutput] = []
     if dic_uriages_for_coa['koito']:
         for uriage in dic_uriages_for_coa['koito']:
-            koitoCoas.append(InstanceFactory.get_koitoCoa(uriage))
+            koitoCoas.append(InstanceFactory.get_koitoCoa(uriage, checkHatumono))
 
 
     '''
@@ -369,6 +383,7 @@ def start()-> None:
                                       output_path, 
                                       barcodeFolder)
 
+
     '''
     Contextクラス(CreateTssBat)にexcel_outputs_argsを渡して、
     アウトプットを作ってもらう
@@ -376,8 +391,7 @@ def start()-> None:
     recorder.out_log('', '\n')
     recorder.out_file('', '\n')
 
-    createTssBat:CreateTssBat = CreateTssBat(excel_outputs_args, recorder)
+
+    createTssBat:CreateTssBat = \
+            InstanceFactory.get_createTssBat(excel_outputs_args, recorder)
     createTssBat.create_tssBat()
-
-
-    InstanceFactory.delete_cnxn

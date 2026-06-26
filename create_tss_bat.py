@@ -28,16 +28,6 @@ class CreateTssBat:
             self._recorder.out_log(txt)
             self._recorder.out_file(txt)
 
-            result = excel_output.create_tssBat(exe_path, 
+            excel_output.create_tssBat(exe_path, 
                                                 output_path, 
                                                 barcodeFolder)
-            if result is None:
-                result_txt = f'{output_name}はありませんでした'
-                self._recorder.out_log(result_txt, '\n')
-                self._recorder.out_file(result_txt, '\n')
-                continue
-
-            returncode: int = result.returncode 
-            code_txt = f'{output_name}のreturncode = {returncode}'
-            self._recorder.out_log(code_txt, '\n')
-            self._recorder.out_file(code_txt, '\n')

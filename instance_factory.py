@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
     from uriage_for_packing import UriageForPacking
     from recorder import Recorder
+    from create_tss_bat import CreateTssBat
+    from check_hatumono import CheckHatumono
 
 
 class InstanceFactory:
@@ -199,14 +201,16 @@ class InstanceFactory:
                                  createJson: "CreateJson",
                                  factory_name: str,
                                  unsouSet_col: List[str],
-                                 createDictFromLIst: "CreateDictFromList"
+                                 createDictFromLIst: "CreateDictFromList",
+                                 recorder: "Recorder"
                                  ) -> IExcelOutput:
         syukkaJissekiSyoukai: IExcelOutput = SyukkaJissekiSyoukai(
                 uriages,
                 createJson,
                 factory_name,
                 unsouSet_col,
-                createDictFromLIst)
+                createDictFromLIst,
+                recorder)
         return  syukkaJissekiSyoukai
 
     
@@ -247,40 +251,66 @@ class InstanceFactory:
                          uriageForPackings: List["UriageForPacking"],
                          createJson: "CreateJson",
                          factory_name: str,
-                         createDictFromLIst: "CreateDictFromList"
+                         createDictFromLIst: "CreateDictFromList",
+                         recorder: "Recorder"
                          ) -> IExcelOutput:
 
         allPackings: AllPackings = AllPackings(
                 uriageForPackings,
                 createJson,
                 factory_name,
-                createDictFromLIst)
+                createDictFromLIst,
+                recorder)
 
         return  allPackings
 
     
     @classmethod
-    def get_hsCoa(cls, uriage: "UriageForSyukkaJisseki"
+    def get_hsCoa(cls, uriage: "UriageForSyukkaJisseki",
+                  checkHatumono: "CheckHatumono"
                          ) -> IExcelOutput:
 
-        hsCoa: HsCoa = HsCoa(uriage)
+        hsCoa: IExcelOutput = HsCoa(uriage, checkHatumono)
 
         return  hsCoa
 
     
     @classmethod
-    def get_mhsCoa(cls, uriage: "UriageForSyukkaJisseki"
+    def get_mhsCoa(cls, uriage: "UriageForSyukkaJisseki",
+                  checkHatumono: "CheckHatumono"
                          ) -> IExcelOutput:
 
-        mhsCoa: MhsCoa = MhsCoa(uriage)
+        mhsCoa: IExcelOutput = MhsCoa(uriage, checkHatumono)
 
         return  mhsCoa
 
     
     @classmethod
-    def get_koitoCoa(cls, uriage: "UriageForSyukkaJisseki"
+    def get_koitoCoa(cls, uriage: "UriageForSyukkaJisseki",
+                     checkHatumono: "CheckHatumono"
                          ) -> IExcelOutput:
 
-        koitoCoa: KoitoCoa = KoitoCoa(uriage)
+        koitoCoa: IExcelOutput = KoitoCoa(uriage, checkHatumono)
 
         return  koitoCoa
+
+
+    @classmethod
+    def get_checkHatumono(cls) -> "CheckHatumono":
+        from check_hatumono import CheckHatumono
+        ins_name: str = 'checkHatumono'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = CheckHatumono()
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_createTssBat(cls, excel_outputs_args:List[Dict[str,Any]],
+                         recorder: "Recorder") -> "CreateTssBat":
+        from create_tss_bat import CreateTssBat
+        ins_name: str = 'createTssBat'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = CreateTssBat(excel_outputs_args, recorder)
+        return cls._instances[ins_name]
+
+

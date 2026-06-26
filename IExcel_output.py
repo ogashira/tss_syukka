@@ -1,19 +1,21 @@
 import subprocess
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Dict, Any, Set, Tuple
+from recorder import Recorder
 
 if TYPE_CHECKING:
     from create_json import CreateJson
     from uriage_for_packing import UriageForPacking
     from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
     from create_dict_from_list import CreateDictFromList
+    from check_hatumono import CheckHatumono
 
 
 class IExcelOutput(ABC):
     @abstractmethod
     def create_tssBat(self, exe_path: str, 
                            output_path: str, 
-                           barcodeFolder: str = "")->object:
+                           barcodeFolder: str = "")-> None:
         pass
 
 
@@ -22,7 +24,8 @@ class SyukkaJissekiSyoukai(IExcelOutput):
                  createJson: "CreateJson",
                  factory_name:str,
                  unsouSet_col: List[str],
-                 createDictFromList: "CreateDictFromList"
+                 createDictFromList: "CreateDictFromList",
+                 recorder: Recorder
                  )->None:
 
         self._uriages: List[UriageForSyukkaJisseki] = uriages
@@ -30,6 +33,7 @@ class SyukkaJissekiSyoukai(IExcelOutput):
         #unsouSet_col = [ 'unsou_code', 'kubun_no', 'yusyutu' ]
         self._unsouSet_col: List[str] = unsouSet_col
         self._createDictFromList = createDictFromList
+        self._recorder = recorder
 
         self._sumi_json_str: str = self._create_sumi_json_str()
         self._unsouSet_json_str: str = self._create_unsouSet_json_str()
@@ -77,11 +81,15 @@ class SyukkaJissekiSyoukai(IExcelOutput):
 
 
     def create_tssBat(self, exe_path: str, output_path: str, 
-                           barcodeFolder: str = "")->object:
+                           barcodeFolder: str = "")-> None:
 
-        result:object = None
+        output_name = f'出荷実績照会_{self._factoryName}'
+
         if self._unsouSet_json_str == '[]':
-            return result
+            result_txt = f'{output_name}はありませんでした'
+            self._recorder.out_log(result_txt, '\n')
+            self._recorder.out_file(result_txt, '\n')
+            return
 
         args = [
                 self._unsouSet_json_str,
@@ -93,8 +101,11 @@ class SyukkaJissekiSyoukai(IExcelOutput):
                 ]
 
         result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+        returncode: int = result.returncode
 
-        return result
+        code_txt = f'{output_name}のreturncode = {returncode}'
+        self._recorder.out_log(code_txt, '\n')
+        self._recorder.out_file(code_txt, '\n')
 
 
     def collect_uriage_for_coa(self,
@@ -115,12 +126,14 @@ class AllPackings(IExcelOutput):
     def __init__(self, uriages: List["UriageForPacking"], 
                  createJson: "CreateJson",
                  factory_name:str,
-                 createDictFromList: "CreateDictFromList"
+                 createDictFromList: "CreateDictFromList",
+                 recorder: Recorder
                  )->None:
         self._uriages: List[UriageForPacking] = uriages
         self._createJson = createJson
         self._factoryName = self._get_factoryName(factory_name)
         self._createDictFromList = createDictFromList
+        self._recorder = recorder
 
         setPacking = set()
         for uriage in uriages:
@@ -166,16 +179,23 @@ class AllPackings(IExcelOutput):
         return self._createJson.create_json_str(packing_dicts)
 
     
-    def create_tssBat(self, exe_path: str, output_path: str, barcodeFolder: str = "") -> object:
+    def create_tssBat(self, exe_path: str, output_path: str, 
+                                barcodeFolder: str = "") -> None:
+        output_name = f'{self._factoryName}業務_packing'
+
         args = [
                 output_path,
                 self._packing_json_str,
                 self._factoryName
                 ]
 
-        result = subprocess.run([exe_path] + args, capture_output=True, text=True)
 
-        return result
+        result = subprocess.run([exe_path] + args, capture_output=True, text=True)
+        returncode: int = result.returncode
+
+        code_txt = f'{output_name}のreturncode = {returncode}'
+        self._recorder.out_log(code_txt, '\n')
+        self._recorder.out_file(code_txt, '\n')
 
 
 class PackingForDenpyo:
@@ -215,39 +235,44 @@ class PackingForDenpyo:
 
 class HsCoa(IExcelOutput):
 
-    def __init__(self, nonMetal: "UriageForSyukkaJisseki")-> None:
-        self._nonMetal = nonMetal
+    def __init__(self, uriage: "UriageForSyukkaJisseki", 
+                 checkHatumono: "CheckHatumono")-> None:
+        self._uriage = uriage
+        self._checkHatumono = checkHatumono
 
     def create_tssBat(self, exe_path: str, 
                            output_path: str, 
-                           barcodeFolder: str = "")->object:
+                           barcodeFolder: str = "")-> None:
 
-        result: object = self._nonMetal.create_hsCoa(exe_path,
-                                                       output_path)
-        return result
+        self._uriage.create_hsCoa(exe_path, output_path, self._checkHatumono)
 
 
 
 class MhsCoa(IExcelOutput):
 
-    def __init__(self, metal: "UriageForSyukkaJisseki")-> None:
-        self._metal = metal
+    def __init__(self, uriage: "UriageForSyukkaJisseki",
+                 checkHatumono: "CheckHatumono")-> None:
+        self._uriage = uriage
+        self._checkHatumono = checkHatumono
+
 
     def create_tssBat(self, exe_path: str, 
                            output_path: str, 
-                           barcodeFolder: str = "")->object:
+                           barcodeFolder: str = "")-> None:
 
-        result: object = self._metal.create_mhsCoa(exe_path,
-                                                       output_path)
-        return result
+        self._uriage.create_mhsCoa(exe_path, output_path,
+                                   self._checkHatumono)
 
 
 class KoitoCoa(IExcelOutput):
 
-    def __init__(self, nonMetal: "UriageForSyukkaJisseki")-> None:
-        self._nonMetals = nonMetal
+    def __init__(self, uriage: "UriageForSyukkaJisseki",
+                 checkHatumono: "CheckHatumono")-> None:
+        self._uriage = uriage
+        self._checkHatumono = checkHatumono
 
     def create_tssBat(self, exe_path: str, 
                            output_path: str, 
-                           barcodeFolder: str = "")->object:
-        print('koitoCoa created')
+                           barcodeFolder: str = "")-> None:
+
+        self._uriage.create_koitoCoa(output_path, self._checkHatumono)
