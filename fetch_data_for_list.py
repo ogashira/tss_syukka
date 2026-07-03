@@ -12,6 +12,41 @@ import openpyxl
 
 warnings.filterwarnings('ignore', category=UserWarning)
 
+def create_minYM_maxYM(syukka_date: str)-> Tuple:
+    '''
+    minM: 出荷日の月の前月
+    maxM: 出荷日の月の翌月
+    '''
+    syukkaY = syukka_date[:4]
+    syukkaM = syukka_date[4:6]
+    if syukkaM == "12":
+        minM = str(int(syukkaM) - 1)
+        minY = syukkaY
+        maxM = "01"
+        maxY = str(int(syukkaY) + 1)
+    elif syukkaM == "01":
+        minM = "12"
+        minY = str(int(syukkaY) - 1)
+        maxM = str(int(syukkaM) + 1)
+        maxY = syukkaY
+    else:
+        minM = str(int(syukkaM) - 1)
+        minY = syukkaY
+        maxM = str(int(syukkaM) + 1)
+        maxY = syukkaY
+
+    if len(maxM) == 1:
+        maxM = "0" + maxM
+    if len(minM) == 1:
+        minM = "0" + minM
+
+    maxYM = "'" + maxY + maxM + "'"
+    minYM = "'" + minY + minM + "'"
+
+    return minYM, maxYM
+
+
+
 class IFetchDataForList(ABC):
 
     @abstractmethod
@@ -36,6 +71,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " RURIDT.RurCMNo AS '得意先注文ＮＯ',"
                     " RURIHD.RurUnsCD AS 'unsouCD',"
                     " MA_UNS.aitNam1 AS '依頼先',"
+                    " RURIDT.RurUriDay AS '出荷日',"
                     " RURIDT.RurNODay AS '納期',"
                     " RURIDT.RurHinCD AS '売り品番',"
                     " RURIDT.RurHinNam AS '品名',"
@@ -174,6 +210,92 @@ class FetchUriageSumi(IFetchDataForList):
         return columns, data_list
 
 
+class FetchCalenderUnsouya(IFetchDataForList):
+
+    def __init__(self, cnxn, syukka_date:str) -> None:
+        self.cnxn = cnxn
+        self._minYM, self._maxYM = create_minYM_maxYM(syukka_date)
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT CalYM AS 'YYYYMM',"
+                    " CalDay AS 'DD',"
+                    " CalYobiJ AS 'Week',"
+                    " CalFlg AS 'holiday'"
+                    " FROM MCALEN"
+                    " WHERE CalKojCD = '@0001'" 
+                    " AND CalBuCD = 'DUMMY'"
+                    " AND CalYM >=" + self._minYM +
+                    " AND CalYM <=" + self._maxYM +
+                    " ORDER BY CalYM, CalDay"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchCalenderUnsouya') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+
+        return columns, data_list
+
+
+class FetchCalenderToyo(IFetchDataForList):
+
+    def __init__(self, cnxn, syukka_date:str) -> None:
+        self.cnxn = cnxn
+
+        self._minYM, self._maxYM = create_minYM_maxYM(syukka_date)
+
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT CalYM AS 'YYYYMM',"
+                    " CalDay AS 'DD',"
+                    " CalYobiJ AS 'Week',"
+                    " CalFlg AS 'holiday'"
+                    " FROM MCALEN"
+                    " WHERE CalKojCD = '@@@@@'" 
+                    " AND CalYM >=" + self._minYM +
+                    " AND CalYM <=" + self._maxYM +
+                    " ORDER BY CalYM, CalDay"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchCalenderToyo') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+
+
 class FetchProductCan(IFetchDataForList):
     # PSマスタの品目１がGK(缶)のやつ
 
@@ -251,14 +373,86 @@ class FetchTnju(IFetchDataForList):
         return columns, data_list
 
 
-class FetchUnsoutaiouToke(IFetchDataForList):
+class FetchUnsoutaiouHonsya(IFetchDataForList):
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, cnxn) -> None:
+        self.cnxn = cnxn
         
 
     def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT DesKojCD AS 'factoryCD',"
+                    " DesTokCD AS 'tokuiCD',"
+                    " DesNonyuCD AS 'nonyuCD',"
+                    " DesLeadTime AS 'leadTime'," # int
+                    " DesIsExport AS 'isExport'"  # int 1 or 0 
+                    " From dbo.MDESTN_U2002"
+                    " WHERE DesKojCD = '@0001'"
+                    " ORDER BY DesKojCD,DesTokCD,DesNonyuCD"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchUnsoutaiouHonsya') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+
+
+class FetchUnsoutaiouToke(IFetchDataForList):
+
+    def __init__(self, cnxn) -> None:
+        self.cnxn = cnxn
         
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT DesKojCD AS 'factoryCD',"
+                    " DesTokCD AS 'tokuiCD',"
+                    " DesNonyuCD AS 'nonyuCD',"
+                    " DesLeadTime AS 'leadTime'," # int
+                    " DesIsExport AS 'isExport'"  # int 1 or 0 
+                    " From dbo.MDESTN_U2002"
+                    " WHERE DesKojCD = '@0002'"
+                    " ORDER BY DesKojCD,DesTokCD,DesNonyuCD"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchUnsoutaiouToke') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+        
+    '''
         path = r'//192.168.1.247/共有/経理課ﾌｫﾙﾀﾞ/運賃計算関係/unsoutaiou_toke.csv'
         if platform.system() == 'Linux':
             path = r'/mnt/public/経理課ﾌｫﾙﾀﾞ/運賃計算関係/unsoutaiou_toke.csv'
@@ -274,6 +468,7 @@ class FetchUnsoutaiouToke(IFetchDataForList):
         data_list = data[1:]
             
         return columns, data_list
+        '''
 
 
 class FetchSyukkaListCoa(IFetchDataForList):

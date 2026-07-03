@@ -3,6 +3,8 @@ import platform
 import sys
 from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings, \
         HsCoa, MhsCoa, KoitoCoa
+from IAdd_to_yoteiSouko import AddForCoa, AddForSiteiDenpyo, AddForEigyosyo, \
+        AddForDohai, AddForWeekdayDiff, IAddToYoteiSouko
 from fetch_data_for_list import IFetchDataForList
 
 # 実行時にはインポートせず、型チェックの為だけに書く
@@ -86,7 +88,16 @@ class InstanceFactory:
         from fetch_data_for_list import FetchUnsoutaiouToke
         ins_name: str = 'fetchUnsoutaiouToke'
         if ins_name not in cls._instances:
-            cls._instances[ins_name] = FetchUnsoutaiouToke()
+            cls._instances[ins_name] = FetchUnsoutaiouToke(cls._cnxn_effit)
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_fetchUnsoutaiouHonsya(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchUnsoutaiouHonsya
+        ins_name: str = 'fetchUnsoutaiouHonsya'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchUnsoutaiouHonsya(cls._cnxn_effit)
         return cls._instances[ins_name]
 
 
@@ -149,6 +160,26 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchCalenderUnsouya(cls, syukka_date: str) -> IFetchDataForList:
+        from fetch_data_for_list import FetchCalenderUnsouya
+        ins_name: str = 'fetchCalenderUnsouya'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchCalenderUnsouya(
+                                  cls._cnxn_effit, syukka_date)
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_fetchCalenderToyo(cls, syukka_date: str) -> IFetchDataForList:
+        from fetch_data_for_list import FetchCalenderToyo
+        ins_name: str = 'fetchCalenderToyo'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchCalenderToyo(
+                                  cls._cnxn_effit, syukka_date)
+        return cls._instances[ins_name]
+
+
+    @classmethod
     def get_createJson(cls) -> "CreateJson":
         from create_json import CreateJson
         ins_name: str = 'createJson'
@@ -169,10 +200,9 @@ class InstanceFactory:
     @classmethod
     def get_uriagesHonsyaToke(cls, 
                                 sumi_dicts: List[Dict[str,Any]],
-                                yusyutu_dict: Dict[Tuple,str],
+                                yusyutu_dicts: Dict[str, Dict[Tuple,str]],
                                 tenpCoa_dicts: List[Dict[str,Any]],
                                 recorder: "Recorder") -> Tuple:
-        #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         # sumi_dicts = [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
         # tenpCoa_dicts =[{'得意先ｺｰﾄﾞ':'T1020', '納入先コード':None, .....},{.....}....] 
         from uriage_for_syukkaJisseki import UriageForSyukkaJisseki
@@ -182,13 +212,20 @@ class InstanceFactory:
         #Uriageインスタンス生成し、uriages_toke, uriages_honsyaに分ける
         if ins_name not in cls._instances:
             for sumi_dict in sumi_dicts:
-                uriage_instance: UriageForSyukkaJisseki = \
-                        UriageForSyukkaJisseki(sumi_dict, 
-                                    yusyutu_dict, tenpCoa_dicts, recorder)
                 if sumi_dict['factory_name'] == '@0001':
+                    uriage_instance: UriageForSyukkaJisseki = \
+                        UriageForSyukkaJisseki(sumi_dict, 
+                                               yusyutu_dicts['honsya'], 
+                                               tenpCoa_dicts, 
+                                               recorder)
                     uriages_honsya.append(uriage_instance)
-                    continue
-                uriages_toke.append(uriage_instance)
+                else:
+                    uriage_instance: UriageForSyukkaJisseki = \
+                        UriageForSyukkaJisseki(sumi_dict, 
+                                               yusyutu_dicts['toke'], 
+                                               tenpCoa_dicts, 
+                                               recorder)
+                    uriages_toke.append(uriage_instance)
 
             cls._instances[ins_name] = (uriages_honsya, uriages_toke)
 
@@ -217,11 +254,14 @@ class InstanceFactory:
     @classmethod
     def get_uriageForPackingsHonsyaToke(cls, 
                                 sumi_for_packing_dicts: List[Dict[str,Any]],
-                                yusyutu_dict: Dict[Tuple,str],
+                                yusyutu_dicts: Dict[str, Dict[Tuple,str]],
+                                leadTime_dicts: Dict[str, Dict[Tuple,int]],
                                 productCan_dic: Dict[str,str],
                                 tnju_dic: Dict[str,Any], 
-                                recorder: "Recorder") -> Tuple:
-        #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
+                                recorder: "Recorder",
+                                addToYoteiSoukos: Dict[str, IAddToYoteiSouko]
+                                )-> Tuple:
+        #yusyutu_dict = {('T0060', 'H172'): 'y', ('T0060', ''): '',.....}
         # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
         from uriage_for_packing import UriageForPacking
         ins_name: str = 'uriagePackingsHonsyaToke'
@@ -229,16 +269,26 @@ class InstanceFactory:
         uriageForPackings_honsya: List[UriageForPacking] = []
         if ins_name not in cls._instances:
             for sumi_for_packing_dict in sumi_for_packing_dicts:
-                uriageForPacking_instance: UriageForPacking = \
+                if sumi_for_packing_dict['factory_name'] == '@0001':
+                    uriageForPacking_instance: UriageForPacking = \
                         UriageForPacking(sumi_for_packing_dict, 
-                                         yusyutu_dict,
+                                         yusyutu_dicts['honsya'],
+                                         leadTime_dicts['honsya'],
                                          productCan_dic,
                                          tnju_dic,
-                                         recorder)
-                if sumi_for_packing_dict['factory_name'] == '@0001':
+                                         recorder,
+                                         addToYoteiSoukos)
                     uriageForPackings_honsya.append(uriageForPacking_instance)
-                    continue
-                uriageForPackings_toke.append(uriageForPacking_instance)
+                else:
+                    uriageForPacking_instance: UriageForPacking = \
+                        UriageForPacking(sumi_for_packing_dict, 
+                                         yusyutu_dicts['toke'],
+                                         leadTime_dicts['toke'],
+                                         productCan_dic,
+                                         tnju_dic,
+                                         recorder,
+                                         addToYoteiSoukos)
+                    uriageForPackings_toke.append(uriageForPacking_instance)
 
             cls._instances[ins_name] = (uriageForPackings_honsya, 
                                             uriageForPackings_toke)
@@ -312,5 +362,40 @@ class InstanceFactory:
         if ins_name not in cls._instances:
             cls._instances[ins_name] = CreateTssBat(excel_outputs_args, recorder)
         return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_addForCoa(cls, tenpCoa_dicts:List[Dict[str,Any]]
+                              )-> IAddToYoteiSouko:
+        addForCoa: IAddToYoteiSouko = AddForCoa(tenpCoa_dicts)
+        return addForCoa
+
+
+    @classmethod
+    def get_addForSiteiDenpyo(cls, tenpSitei_dicts:List[Dict[str,Any]] 
+                              )-> IAddToYoteiSouko:
+        addForSiteiDenpyo: IAddToYoteiSouko = AddForSiteiDenpyo(tenpSitei_dicts)
+        return addForSiteiDenpyo
+
+
+    @classmethod
+    def get_addForEigyosyo(cls)-> IAddToYoteiSouko:
+        addForEigyosyo: IAddToYoteiSouko = AddForEigyosyo()
+        return addForEigyosyo
+
+
+    @classmethod
+    def get_addForDohai(cls)-> IAddToYoteiSouko:
+        addForDohai: IAddToYoteiSouko = AddForDohai()
+        return addForDohai
+
+
+    @classmethod
+    def get_addForWeekdayDiff(cls, list_YMD: List[str], 
+                 dict_unso_holiday: Dict[str, str], 
+                 dict_toyo_holiday)-> IAddToYoteiSouko:
+        addForWeekdayDiff: IAddToYoteiSouko = AddForWeekdayDiff( list_YMD, 
+                                        dict_unso_holiday, dict_toyo_holiday)
+        return addForWeekdayDiff
 
 

@@ -9,11 +9,11 @@ from check_hatumono import CheckHatumono
 
 class UriageForSyukkaJisseki:
     def __init__(self, dict_data: Dict[str,Any], 
-                 yusyutu_dict: Dict,
+                 yusyutu_dict: Dict[Tuple, str],
                  tenpCoa_dicts: List[Dict[str, Any]],
                  recorder: Recorder)-> None:
 
-        #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
+        #yusyutu_dict = {('T0060', 'H172'):'y' , ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
         self._tenpCoa_dicts = tenpCoa_dicts
         self._recorder = recorder

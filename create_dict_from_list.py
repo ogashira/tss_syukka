@@ -5,27 +5,68 @@ class CreateDictFromList:
     def __init__(self)-> None:
         pass
 
-    def create_yusyutuDict(self, 
+    def _list_to_dict_tuple_int(self,
                         unsoutaiou_data: List[List[Any]],
-                        unsoutaiou_col: List[str])-> Dict[Tuple,str]:
-
+                        unsoutaiou_col: List[str], 
+                        toValueCol: str)-> Dict[Tuple,int]:
+        '''
+        toValueCol : 'isExport' or 'leadTime' 辞書のvalueにする列
+        unsoutaiou_dataはeffitA.MDESTN_U2002からfetchしたデータ。
+        昔はunsoutaiou_toke.csvを使っていた。その名残で、データが無い場合は
+        ''(空文字）であった。MDESTN_U2002になって、''(空文字)か ' '(半角スペース)か
+        わからないので、昔のままで、' 'だったら''に変換しておく
+        '''
 
         # 得意先コードと納入先コードのインデックスを求めておく
-        yusyutu_dist_idx: int = GetIdx.get_idx(unsoutaiou_col, '輸出向先')
-        tokui_idx: int = GetIdx.get_idx(unsoutaiou_col, '得意先コード')
-        nonyu_idx: int = GetIdx.get_idx(unsoutaiou_col, '納入先コード')
+        value_idx: int = GetIdx.get_idx(unsoutaiou_col, toValueCol)
+        tokui_idx: int = GetIdx.get_idx(unsoutaiou_col, 'tokuiCD')
+        nonyu_idx: int = GetIdx.get_idx(unsoutaiou_col, 'nonyuCD')
 
         # get_idxで-1が返ったらNG
-        if yusyutu_dist_idx == -1 or tokui_idx == -1 or nonyu_idx == -1:
-            raise IndexError('カラムに輸出向先、得意先コード、納入先コードがありません')
+        if value_idx == -1 or tokui_idx == -1 or nonyu_idx == -1:
+            raise IndexError(f'カラムに{toValueCol}、tokuiCD、nonyuCDがありません')
 
-        # yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
-        yusyutu_dict: Dict[Tuple,str] = {}
+        dict_tuple_int: Dict[Tuple, int] = {}
         for line in unsoutaiou_data:
-            tokui_nonyu_tpl: Tuple = (line[tokui_idx], line[nonyu_idx])
-            yusyutu_dict[tokui_nonyu_tpl] = line[yusyutu_dist_idx]
+            nonyu_cd = line[nonyu_idx]
+            if nonyu_cd == ' ':  # 半角スペースは空文字に変換
+                nonyu_cd = ''
+
+            tokui_nonyu_tpl: Tuple = (line[tokui_idx], nonyu_cd)
+            dict_tuple_int[tokui_nonyu_tpl] = line[value_idx]
+
+        return dict_tuple_int
+
+
+    def create_yusyutuDict(self, 
+                        unsoutaiou_data: List[List[Any]],
+                        unsoutaiou_col: List[str], 
+                        toValueCol: str)-> Dict[Tuple,str]:
+
+        yusyutu_dict_int: Dict[Tuple,int] = self._list_to_dict_tuple_int(
+                                 unsoutaiou_data, unsoutaiou_col, toValueCol)
+        # yusyutu_dict_intのvalue: 1 or 0 を　'y' or '' にする
+
+        yusyutu_dict: Dict[Tuple,str] = {}
+        for k, v in yusyutu_dict_int.items():
+            if v == 0:   # 0 or 1
+                is_export = ''
+            else:
+                is_export = 'y'
+            yusyutu_dict[k] = is_export
+
 
         return yusyutu_dict
+
+
+    def create_leadTimeDict(self, 
+                        unsoutaiou_data: List[List[Any]],
+                        unsoutaiou_col: List[str],
+                        toValueCol: str)-> Dict[Tuple,int]:
+
+        leadTime_dict: Dict[Tuple, int] = self._list_to_dict_tuple_int(
+                                 unsoutaiou_data, unsoutaiou_col, toValueCol)
+        return leadTime_dict
 
 
     def create_dicts_from_colAndList(self, col: List[str], 
@@ -82,3 +123,43 @@ class CreateDictFromList:
             list_dict.append(inner_dict)
 
         return list_dict
+
+
+    def create_list_YMD(self, calenderCol: List[str], 
+                calenderData: List[List[str]], YYYYMM: str, DD: str) -> List[str]:
+        '''
+        calenderData = [['202606','01','月',' '], ['202606','02','火',' '],..]   
+        return = ['20260601', '20260602', ......]
+        '''
+        idx_YYYYMM = GetIdx.get_idx(calenderCol, YYYYMM)
+        idx_DD = GetIdx.get_idx(calenderCol, DD)
+        list_YMD:List[str] = []
+        for line in calenderData:
+            list_YMD.append(f'{line[idx_YYYYMM]}{line[idx_DD]}')
+
+        return list_YMD
+
+
+    def create_YMD_holiday(self, calenderCol: List[str], 
+                           calenderData: List[List[str]], YYYYMM: str, 
+                           DD: str, holiday: str)-> Dict[str, str]:
+        '''
+        calenderData = [['202606','01','月',' '], ['202606','02','火',' '],..]   
+        return = {'20260601': ' ', '20260602': '1', ......}
+        '''
+        idx_YYYYMM = GetIdx.get_idx(calenderCol, YYYYMM)
+        idx_DD = GetIdx.get_idx(calenderCol, DD)
+        idx_holi = GetIdx.get_idx(calenderCol, holiday)
+        dict_YMD_holiday = {}
+        for line in calenderData:
+            k:str = f'{line[idx_YYYYMM]}{line[idx_DD]}'
+            dict_YMD_holiday[k] = line[idx_holi]
+
+        return dict_YMD_holiday
+
+
+
+        
+
+
+

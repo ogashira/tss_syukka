@@ -1,7 +1,9 @@
 import subprocess
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Dict, Any, Set, Tuple
+from decimal import Decimal
 from recorder import Recorder
+
 
 if TYPE_CHECKING:
     from create_json import CreateJson
@@ -207,6 +209,8 @@ class PackingForDenpyo:
         self._uriageForPackings = uriageForPackings
         self._createJson = createJson
 
+        '''ここで、uriageForPackingsに総重量sumWeightをセットする'''
+        self._set_sumWeight_to_uriageForPacking()
 
     def _create_packing_dict(self, 
                           packing_dicts: List[Dict[str, Any]])-> None:
@@ -232,6 +236,20 @@ class PackingForDenpyo:
         packing_dicts.append(add_dict)
 
 
+    ''' uriageForPackingに総重量sumWeightを追加する>>>>>>>>>>>>>>>>>'''
+    def _calc_sumWeight(self)-> Decimal:
+        sumWeight: Decimal = Decimal('0')
+        for uriage in self._uriageForPackings:
+            sumWeight = uriage.plus_myWeight(sumWeight)
+        return sumWeight
+
+
+    def _set_sumWeight_to_uriageForPacking(self):
+        sumWeight: Decimal = self._calc_sumWeight()
+        for uriage in self._uriageForPackings:
+            uriage.set_sumWeight(sumWeight)
+
+    '''<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'''
 
 class HsCoa(IExcelOutput):
 

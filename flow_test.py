@@ -104,7 +104,7 @@ def data_fetch(instance: IFetchDataForList, recorder)-> Tuple:
     return instanceCol, instanceData
 
 
-def start()-> None:
+def start()-> IAddToYoteiSouko:
 
     syukka_date = date_input()
 
@@ -120,11 +120,13 @@ def start()-> None:
     sumi_data = []
     sumi_col, sumi_data = data_fetch(sumi, sumi)
 
+    '''
     if not sumi_data:
         txt = '売上データがありません。処理を中止します'
         recorder.out_log(txt, '\n')
         recorder.out_file(txt, '\n')
         sys.exit(1)
+    '''
 
     #unsoutaiouデータを取得
     unsoutaiou_toke = InstanceFactory.get_fetchUnsoutaiouToke()
@@ -332,109 +334,5 @@ def start()-> None:
                                '@0001',
                                createDictFromList,
                                recorder)
-    
-    '''ここから検査成績書>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
-    #dic_uriages_for_coa = 
-    #{'koito': [........], 'metal': [......], 'nonMetal': [.......]} 
-    dic_uriages_for_coa: Dict[str, List[UriageForSyukkaJisseki]] = {}
-    dic_uriages_for_coa['koito'] = []
-    dic_uriages_for_coa['metal'] = []
-    dic_uriages_for_coa['nonMetal'] = []
-    if syukkaJissekiSyoukai_honsya is not None:
-        if isinstance(syukkaJissekiSyoukai_honsya, SyukkaJissekiSyoukai):
-            syukkaJissekiSyoukai_honsya.collect_uriage_for_coa(dic_uriages_for_coa)
-    if syukkaJissekiSyoukai_toke is not None:
-        if isinstance(syukkaJissekiSyoukai_toke, SyukkaJissekiSyoukai):
-            syukkaJissekiSyoukai_toke.collect_uriage_for_coa(dic_uriages_for_coa)
-    '''
-    syukkaJissekiSyoukai_tokeはIExcelOutputインターフェース型として宣言しているの
-    で、collect_uriage_for_coaメソッドはインターフェースには無いためエラーになる。
-    そこで、if isinstanceでSyukkaJissekiSyoukai型としてpyrightに認識させる。
-    '''
-    checkHatumono: "CheckHatumono" = InstanceFactory.get_checkHatumono()
 
-    hsCoas: List[IExcelOutput] = []
-    if dic_uriages_for_coa['nonMetal']:
-        for uriage in dic_uriages_for_coa['nonMetal']:
-            hsCoas.append(InstanceFactory.get_hsCoa(uriage, checkHatumono))
-    mhsCoas: List[IExcelOutput] = []
-    if dic_uriages_for_coa['metal']:
-        for uriage in dic_uriages_for_coa['metal']:
-            mhsCoas.append(InstanceFactory.get_mhsCoa(uriage, checkHatumono))
-    koitoCoas: List[IExcelOutput] = []
-    if dic_uriages_for_coa['koito']:
-        for uriage in dic_uriages_for_coa['koito']:
-            koitoCoas.append(InstanceFactory.get_koitoCoa(uriage, checkHatumono))
-
-
-    '''
-    syukkaJissekiSyoukai_, allPackings_, hsCoa, mhsCoa, koitoCoa用の
-    引数を作って、excel_outputs_argsに詰めていく
-    '''
-            
-    syukkaJisseki_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoSkJsBat\ToyoKogyoSkJsBat.exe'
-    packing_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoPackingBat\ToyoKogyoPackingBat.exe'
-    hs_coa_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoHsRepBat\ToyoKogyoHsRepBat.exe'
-    mhs_coa_path = r'\\192.168.1.247\共有\TSS_System\TssSystem\ToyoKogyo\Bat\ToyoKogyoMhsRepBat\ToyoKogyoMhsRepBat.exe'
-    koito_coa_path = ''
-    output_path = mydir
-    barcodeFolder = mydir
-
-    '''
-    excel_outputs_args = 
-    [{'output_name':str, 'excel_output':IExcelOutput, 'exe_path':str, 
-    'output_path':str, 'barcodeFolder':str}, {....}, {....} ]
-    '''
-
-    excel_outputs_args: List[Dict[str,Any]] = []
-
-    create_excel_outputs_args(excel_outputs_args,'出荷実績照会_本社',
-                             syukkaJissekiSyoukai_honsya, syukkaJisseki_path,
-                             output_path, barcodeFolder)
-
-    create_excel_outputs_args(excel_outputs_args,'出荷実績照会_土気',
-                             syukkaJissekiSyoukai_toke, syukkaJisseki_path,
-                             output_path, barcodeFolder)
-
-    create_excel_outputs_args(excel_outputs_args,'業務packing_本社',
-                             allPackings_honsya, packing_path,
-                             output_path, '')
-
-    create_excel_outputs_args(excel_outputs_args,'業務packing_土気',
-                             allPackings_toke, packing_path,
-                             output_path, '')
-
-    if hsCoas:
-        for hsCoa in hsCoas:
-            create_excel_outputs_args(excel_outputs_args,
-                                      '品管シートCoa',
-                                      hsCoa, hs_coa_path,
-                                      output_path, 
-                                      barcodeFolder)
-    if mhsCoas:
-        for mhsCoa in mhsCoas:
-            create_excel_outputs_args(excel_outputs_args,
-                                      '品管シートCoa',
-                                      mhsCoa, mhs_coa_path,
-                                      output_path, 
-                                      barcodeFolder)
-    if koitoCoas:
-        for koitoCoa in koitoCoas:
-            create_excel_outputs_args(excel_outputs_args,
-                                      '品管シートCoa',
-                                      koitoCoa, koito_coa_path,
-                                      output_path, 
-                                      barcodeFolder)
-
-
-    '''
-    Contextクラス(CreateTssBat)にexcel_outputs_argsを渡して、
-    アウトプットを作ってもらう
-    '''
-    recorder.out_log('', '\n')
-    recorder.out_file('', '\n')
-
-
-    createTssBat:CreateTssBat = \
-            InstanceFactory.get_createTssBat(excel_outputs_args, recorder)
-    createTssBat.create_tssBat()
+    return addForWeekdayDiff

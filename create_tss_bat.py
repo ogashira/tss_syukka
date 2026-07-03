@@ -23,7 +23,6 @@ class CreateTssBat:
             output_name: str = innerDic['output_name']
             
 
-            # TODO
             txt = (f'{output_name}を作成します')
             self._recorder.out_log(txt)
             self._recorder.out_file(txt)
