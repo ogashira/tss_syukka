@@ -1,5 +1,6 @@
 import os
 import unicodedata
+from decimal import Decimal
 from typing import List, Any
 
 
@@ -82,7 +83,10 @@ class Recorder(object):
 
     def _pad_text(self, text, width, align="left"):
         """全角半角を考慮して、指定された表示幅になるようスペースで埋める"""
-        text_str = str(text)
+        if type(text)== Decimal:
+            text_str = str(float(text))
+        else:
+            text_str = str(text)
         current_width = self._get_east_asian_width(text_str)
         pad_size = max(0, width - current_width) # 不足している幅（スペースの数）
         

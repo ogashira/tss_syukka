@@ -119,6 +119,7 @@ def start()-> None:
     staffCD = "000240" # 担当者コード
     target_dir = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理"
     exePath = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理\U2002_AUR020B.exe"
+    # TODO "toyo_test"を"toyo"に変更する
     command_line = \
       f'{exePath} \'"toyo_test","1","{staffCD}","{syukka_date}","","","","11"\''
     powershell_path = os.path.join(os.environ['SystemRoot'], 'System32', 
@@ -130,6 +131,8 @@ def start()-> None:
         result = subprocess.run(command_line, cwd= target_dir, shell= True, 
                               executable= powershell_path, capture_output=True,
                               text=True, encoding="cp932")
+        recorder.out_log(f'result: {result}', '\n')
+        recorder.out_file(f'result: {result}', '\n')
     except Exception as e:
         print('自動出荷処理エラーです', e)
 
@@ -449,14 +452,14 @@ def start()-> None:
     if mhsCoas:
         for mhsCoa in mhsCoas:
             create_excel_outputs_args(excel_outputs_args,
-                                      '品管シートCoa',
+                                      'メタル品管シートCoa',
                                       mhsCoa, mhs_coa_path,
                                       output_path, 
                                       barcodeFolder)
     if koitoCoas:
         for koitoCoa in koitoCoas:
             create_excel_outputs_args(excel_outputs_args,
-                                      '品管シートCoa',
+                                      '小糸Coa',
                                       koitoCoa, koito_coa_path,
                                       output_path, 
                                       barcodeFolder)

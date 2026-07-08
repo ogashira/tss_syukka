@@ -14,7 +14,44 @@ GitHub Publicリポジトリで公開</br>
 ### 起動方法
 ##### tss_syukka
 - `Winボタン+R -> tss_syukka入力 -> Enter`または`cmdにて、 pushd \\wsl$\Ubuntu\home\oga\projects\tss_syukka\`デイレクトリ内にて`python main.py`で実行
-### 動作
+### クラス
+
+| クラス名 | interface | 仕事 |
+| :---:    | :---:     | :--- |
+| flow     |  | def start() プログラムの流れ    |
+| InstanceFactory |  | インスタンスを作る |
+| FetchUriageSumiForPacking | IFetchDataForList | 業務_packing用の売上データをfetch |
+| FetchUriageSumi | IFetchDataForList | 出荷実績照会用の売上データをfetch |
+| FetchTyuzan | IFetchDataForList  | 注残確認用のデータをfetch |
+| FetchCalenderUnsouya | IFetchDataForList | 運送業者の稼働日カレンダーをfetch |
+| FetchCalenderToyo | IFetchDataForList | 東洋の稼働日カレンダーをfetch |
+| FetchProductCan | IFetchDataForList | PSマスタから缶のデータをfetch |
+| FetchTnju | IFetchDataForList | 品番マスタから単重のデータをfetch |
+| FetchUnsoutaiouHonsya | IFetchDataForList  | 本社のリードタイムと輸出向け先のデータをfetch |
+| FetchUnsoutaiouToke | IFetchDataForList | 土気のリードタイムと輸出向け先のデータをfetch |
+| FetchSyukkaListCoa | IFetchDataForList | 出荷添付リスト.xlsxの成績書シートを取り込む |
+| FetchSyukkaListSiteiDenpyo | IFetchDataForList | 出荷添付リスト.xlsxの指定伝票シートを取り込む |
+| CreateTssBat |   | IExcelOutput型のインスタンスに出荷実績照会、</br>業務_packing、成績書を作らせる |
+| SyukkaJissekiSyoukai | IExcelOutput | 最大で２個(本社分、土気分)のインスタンスが作られる。UriageForSyukkaJissekiのインスタンスをリストで保持。
+| AllPackings | IExcelOutput | 最大で２個(本社分、土気分)のインスタンスが作られる。</br>UriageForPacking, PackingForDenpyoのインスタンスをリストで保持。
+| HsCoa | IExcelOutput | 成績書の必要数分のインスタンスが作られる |
+| MhsCoa | IExcelOutput | 成績書の必要数分のインスタンスが作られる |
+| KoitoCoa | IExcelOutput | 成績書の必要数分のインスタンスが作られる |
+| PackingForDenpyo |   | 伝票の数だけインスタンスが作られる。</br>国内：得意先コード、納入先コード。</br>輸出：得意先コード、納入先コード、注文番号。自分の持っているuriageForPackingsの重量を合計して</br>uriageForPackingsのsumWeight変数に値をセット</br>することもしている。|
+| UriageForSyukkajisseki |   | 出荷実績照会作成用、成績書作成用の売上のインスタンス。売上製品のロット数分のインスタンスが作られる。 
+| UriageForPacking |   | 業務_packing作成用の売上のインスタンス。売上製品の数分のインスタンスが作られる。(ロットが分かれても数は増えない) IAddToYoteiSouko型のインスタンスを持ち、出荷予定倉庫リストに必要な要素を書き込んでもらう。
+| AddForCoa | IAddToYoteiSouko | 出荷予定倉庫に"成"を書き込む |
+| AddForSiteiDenpyo | IAddToYoteiSouko | 出荷予定倉庫に"指"を書き込む |
+| AddForEigyosyo | IAddToYoteiSouko | 出荷予定倉庫に"営業所"を書き込む |
+| AddForDohai | IAddToYoteiSouko | 出荷予定倉庫に"土配"を書き込む |
+| AddForWeekdayDiff | IAddToYoteiSouko | 出荷予定倉庫に"曜日"を書き込む |
+| CreateJson |    | List[Dict[str,Any]]からJson文字列を作る道具 |
+| CreateDictFromList |    | さまざまなListからDictを作る道具 |
+| GetIdx |    | カラムのリストとカラム名からインデックスNoを得る</br>道具。StaticMethod
+| Recorder |    | 文字列を渡して、標準出力とファイルに書き込んでもらう道具。
+
+
+
 
 ### クラス図
 ```mermaid
@@ -50,6 +87,11 @@ class FetchUriageSumiForPacking{
     + fetch_data()pd.DataFrame
 }
 class FetchUriageSumi{
+    - cnxn: object
+    - syukka_date: str
+    + fetch_data()pd.DataFrame
+}
+class FetchTyuzan{
     - cnxn: object
     - syukka_date: str
     + fetch_data()pd.DataFrame
@@ -94,6 +136,7 @@ flow --> InstanceFactory: "生成を依頼"
 InstanceFactory --> IFetchDataForList : "戻り値の型"
 InstanceFactory --> FetchUriageSumiForPacking
 InstanceFactory --> FetchUriageSumi
+InstanceFactory --> FetchTyuzan
 InstanceFactory --> FetchCalenderUnsouya
 InstanceFactory --> FetchCalenderToyo
 InstanceFactory --> FetchProductCan
@@ -195,6 +238,10 @@ class KoitoCoa{
     - _checkHatumono:CheckHatumono
     + create_tssBat(str, str, str=""):result
 }
+class CheckHatumono{
+    + copy_coa(str,str,str,bool)bool
+    + check_is_hatumono(pdf_path)bool
+}
 class UriageForSyukkaJisseki{
     - _factory
     - _得意先コード etc...
@@ -275,15 +322,37 @@ SyukkaJissekiSyoukai "1" o-- ">1" UriageForSyukkaJisseki
 HsCoa ">0" o-- "1" UriageForSyukkaJisseki
 MhsCoa ">0" o-- "1" UriageForSyukkaJisseki
 KoitoCoa ">0" o-- "1" UriageForSyukkaJisseki
+HsCoa ">0" o-- "1" CheckHatumono
+MhsCoa ">0" o-- "1" CheckHatumono
+KoitoCoa ">0" o-- "1" CheckHatumono
 AllPackings "1"  o-- ">1" UriageForPacking
 PackingForDenpyo "1" o-- ">1" UriageForPacking
+IAddToYoteiSouko <|.. AddForCoa
+IAddToYoteiSouko <|.. AddForSiteiDenpyo
+IAddToYoteiSouko <|.. AddForEigyosyo
+IAddToYoteiSouko <|.. AddForDohai
+IAddToYoteiSouko <|.. AddForWeekdayDiff
+UriageForPacking o-- IAddToYoteiSouko
 ```
-1. flowは、InstanceFactoryからIFetchDataForListクラスのインスタンスをもらって必要なデータを得る。
-1. flowは、SyukkaJissekiSyoukai_toke, SyukkaJissekiSyoukai_honsyaのインスタンスを得る。これらインスタンスはUriageForSyukkajissekiのインスタンスのリスト(toke, honsya)を持っている。
-1. flowは、AllPackings_honsya,AllPackings_tokeのインスタンスを得る。AllPackingsはUriageForPackingのインスタンスのリストを持っている。
-1. AllPackingsは必要なUriageForPackingのインスタンスを渡して、PackingForDenpyoのインスタンスのリストを作って保持する。
-1. PackingForDenpyoインスタンスは国内は「得意先コード、納入先コード」毎に、輸出は「得意先コード、納入先コード、注番」毎に存在する。
-1. flowはHsCoa,MhsCoaクラスのインスタンスを得る。これらインスタンスはUriageForSyukkaJissekiのインスタンスのリストを持つ。
-1. SyukkaJissekiSyoukai_toke, SyukkaJissekiSyoukai_honsya,AllPackings_toke, AllPackings_toke,HsCoa,MhsCoaはIExcelOutputインターフェースの実装であり、CreateTssBatクラスが保持している。
-1. flowはCreateTssBatのインスタンスを生成し、create_tssBatメソッドを呼び出して、「出荷実績照会」、「業務_packing」、「検査成績書」を作成する。
-
+1. main->flow.start()
+1. 出荷日を訊かれるので"YYYYMMDD"で入力
+1. `\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理\U2002_AUR020B.exe"`をWindowsPowerShellで実行する。
+1. 受注残がある場合は受注残を表示する。
+1. UriageForSyukkaJissekiのインスタンスを作り、本社、土気に分ける。
+1. UriageForSyukkaJisseki内で、輸出向け先なのか？成績書用の品番？成績書の向け先を求める。
+1. SyukkaJissekiSyoukaiのインスタンス生成し、UriageForSyukkaJissekiをコンストラクタに渡す。
+1. IAddToYoteiSouko型のインスタンス５つを生成して、addToYoteiSoukos辞書に詰める。
+1. UriageForPackingのインスタンスを作り、本社、土気に分ける。その時、addToYoteiSoukosをコンストラクタに渡す。
+1. UriageForPacking内で出荷予定倉庫の要素を求める
+1. AllPackingsのインスタンス生成。その時UriageForPackingのインスタンスを渡す。
+1. AllPackingsの中で、PackingForDenpyoのインスタンスを生成し、そのリストを保持する。
+1. 空のdic_uriages_for_coaをSyukkaJissekiSyoukaiに渡して、UriageForSyukkaJissekiを詰めてもらう。出来上がりは、`{'koito':[UriageForSyukkaJisseki,...], 'metal':[], 'nonMetal':[UriageForSyukkajisseki, UriageForSyukkaJisseki..]}`
+1. dic_uriages_for_coaから、HsCoa,MhsCoa,KoitoCoaのインスタンスを生成し、それぞれhsCoas,mhsCoas,koitoCoasリストに入れる。インスタンス生成時はUriageForSyukkaJissekiとCheckHatumonoをコンストラクタに渡す。
+1. excel_outputs_args: List[Dict[str,Any]]を作る。
+`
+[{'output_name':'出荷実績照会_土気', 'excel_output':SyukkaJissekiSyoukai_toke, 'exe_path':syukkaJissekiPath, 'output_path':mydir, 'barcodeFolder':mydir}, 
+ {'output_name':'業務packing_土気', 'excel_output':AllPackings_toke, 'exe_path':packingPath, 'output_path':mydir, 'barcodeFolder':''},
+ {'output_name':'品管シートCoa', 'excel_output':HsCoa, 'exe_path':hsCoaPath, 'output_path':mydir, 'barcodeFolder':mydir},
+ {'output_name':'メタル品管シートCoa', 'excel_output':MhsCoa, 'exe_path':mhsCoaPath, 'output_path':mydir, 'barcodeFolder':mydir},
+ {'output_name':'小糸Coa', 'excel_output':KoitoCoa, 'exe_path':koitoCoaPath, 'output_path':mydir, 'barcodeFolder':mydir}]`
+1. CreateTssBatのインスタンス生成、コンストラクタにexcel_outputs_argsを渡す。create_tssBatメソッドを呼び出して、出荷実績照会、業務packing、成績書を作って、所定のフォルダに入れる。

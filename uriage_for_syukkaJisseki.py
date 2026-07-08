@@ -33,7 +33,7 @@ class UriageForSyukkaJisseki:
         self._納入先名称１: str = dict_data['納入先名称１']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
         self._備考: str = dict_data['備考']
-        self._add: int = 0 #dict_data['add']
+        self._add: int = dict_data['add']
         self._納入先名: str = dict_data['納入先名']
         self._motoHinCD: str = dict_data['motoHinCD'] # 振替元品番
         self._motoTni: str = dict_data['motoTni']     # 振替元単位
