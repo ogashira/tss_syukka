@@ -84,6 +84,15 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchTyuzan(cls, syukka_date) -> IFetchDataForList:
+        from fetch_data_for_list import FetchTyuzan
+        ins_name: str = 'fetchTyuzan'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchTyuzan(cls._cnxn_effit, syukka_date)
+        return cls._instances[ins_name]
+
+
+    @classmethod
     def get_fetchUnsoutaiouToke(cls) -> IFetchDataForList:
         from fetch_data_for_list import FetchUnsoutaiouToke
         ins_name: str = 'fetchUnsoutaiouToke'

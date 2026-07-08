@@ -72,6 +72,9 @@ class UriageForPacking:
     def _calc_hinban(self)-> str:
         if self._受注単位 != 'CN':
             return self._振替元品番
+        if self._振替元品番 is not None: # Noneではなく、２文字以上の文字があったら
+            if len(self._振替元品番) > 2:
+                return self._振替元品番
         return self._売り品番
 
     def _calc_weight(self)-> Decimal:

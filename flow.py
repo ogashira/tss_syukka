@@ -1,6 +1,8 @@
 import platform
 from re import I
+import os
 import sys
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Set, Tuple, TYPE_CHECKING, Optional
@@ -113,15 +115,48 @@ def start()-> None:
 
     recorder.out_file(f'出荷日：{syukka_date}', '\n')
 
+    '''自動売上処理の実行 '''
+    staffCD = "000240" # 担当者コード
+    target_dir = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理"
+    exePath = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理\U2002_AUR020B.exe"
+    command_line = \
+      f'{exePath} \'"toyo_test","1","{staffCD}","{syukka_date}","","","","11"\''
+    powershell_path = os.path.join(os.environ['SystemRoot'], 'System32', 
+                                  'WindowsPowerShell', 'v1.0', 'powershell.exe')
+
+    result = None
+    txt = f'\n売上処理を実行しました。\n'
+    try:
+        result = subprocess.run(command_line, cwd= target_dir, shell= True, 
+                              executable= powershell_path, capture_output=True,
+                              text=True, encoding="cp932")
+    except Exception as e:
+        print('自動出荷処理エラーです', e)
+
 
     InstanceFactory.get_sql_server_effit()
 
+    # 注残データを取得
+    tyuzan = InstanceFactory.get_fetchTyuzan(syukka_date)
+    tyuzan_data = []
+    tyuzan_col, tyuzan_data = data_fetch(tyuzan, recorder)
+    if tyuzan_data:
+        txt += f'以下の注残があります。\n' 
+        recorder.out_log(txt, '\n')
+        recorder.out_file(txt, '\n')
+        recorder.outLogFile_to_sameNumberOfChara(tyuzan_col, tyuzan_data)
+    else:
+        txt += f'注残はありません。(^o^)\n' 
+        recorder.out_log(txt, '\n')
+        recorder.out_file(txt, '\n')
+
+
     sumi = InstanceFactory.get_fetchUriageSumi(syukka_date)
     sumi_data = []
-    sumi_col, sumi_data = data_fetch(sumi, sumi)
+    sumi_col, sumi_data = data_fetch(sumi, recorder)
 
     if not sumi_data:
-        txt = '売上データがありません。処理を中止します'
+        txt = f'{syukka_date}の売上データがありません。処理を中止します'
         recorder.out_log(txt, '\n')
         recorder.out_file(txt, '\n')
         sys.exit(1)

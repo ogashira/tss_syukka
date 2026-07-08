@@ -210,6 +210,52 @@ class FetchUriageSumi(IFetchDataForList):
         return columns, data_list
 
 
+class FetchTyuzan(IFetchDataForList):
+
+    def __init__(self, cnxn, syukka_date:str) -> None:
+        self.cnxn = cnxn
+        self._syukka_date = syukka_date
+
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT RjcJCNo AS '受注No',"
+                    " RjcJGNo AS '受注行No',"
+                    " RjcTokCD AS '得意先CD',"
+                    " RjcNonyuCD AS '納入先CD',"
+                    " RjcHinCD AS '受注品番',"
+                    " RjcJcSu AS '受注数',"
+                    " RjcURSu AS '売り数'"
+                    " FROM RJYUCD"
+                    " WHERE RjcSKDay =" + self._syukka_date +
+                    " AND RjcTokCD < 'T6000'"
+                    " AND RjcJcSu - RjcURSu > 0 "
+                    " ORDER BY RjcJCNo, RjcJGNo"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchTyuzan') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+
+        return columns, data_list
+
+
 class FetchCalenderUnsouya(IFetchDataForList):
 
     def __init__(self, cnxn, syukka_date:str) -> None:
