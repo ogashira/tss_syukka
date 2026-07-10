@@ -16,41 +16,40 @@ GitHub Publicリポジトリで公開</br>
 - `Winボタン+R -> tss_syukka入力 -> Enter`または`cmdにて、 pushd \\wsl$\Ubuntu\home\oga\projects\tss_syukka\`デイレクトリ内にて`python main.py`で実行
 ### クラス
 
-| クラス名 | interface | 仕事 |
-| :---:    | :---:     | :--- |
-| flow     |  | def start() プログラムの流れ    |
-| InstanceFactory |  | インスタンスを作る |
-| FetchUriageSumiForPacking | IFetchDataForList | 業務_packing用の売上データをfetch |
-| FetchUriageSumi | IFetchDataForList | 出荷実績照会用の売上データをfetch |
-| FetchTyuzan | IFetchDataForList  | 注残確認用のデータをfetch |
-| FetchCalenderUnsouya | IFetchDataForList | 運送業者の稼働日カレンダーをfetch |
-| FetchCalenderToyo | IFetchDataForList | 東洋の稼働日カレンダーをfetch |
-| FetchProductCan | IFetchDataForList | PSマスタから缶のデータをfetch |
-| FetchTnju | IFetchDataForList | 品番マスタから単重のデータをfetch |
-| FetchUnsoutaiouHonsya | IFetchDataForList  | 本社のリードタイムと輸出向け先のデータをfetch |
-| FetchUnsoutaiouToke | IFetchDataForList | 土気のリードタイムと輸出向け先のデータをfetch |
-| FetchSyukkaListCoa | IFetchDataForList | 出荷添付リスト.xlsxの成績書シートを取り込む |
+| クラス名                   | interface         | 仕事 |
+| :---:                      | :---:             | :--- |
+| flow                       |                   | def start() プログラムの流れ    |
+| InstanceFactory            |                   | インスタンスを作る |
+| FetchUriageSumiForPacking  | IFetchDataForList | 業務_packing用の売上データをfetch |
+| FetchUriageSumi            | IFetchDataForList | 出荷実績照会用の売上データをfetch |
+| FetchTyuzan                | IFetchDataForList | 注残確認用のデータをfetch |
+| FetchCalenderUnsouya       | IFetchDataForList | 運送業者の稼働日カレンダーをfetch |
+| FetchCalenderToyo          | IFetchDataForList | 東洋の稼働日カレンダーをfetch |
+| FetchProductCan            | IFetchDataForList | PSマスタから缶のデータをfetch |
+| FetchTnju                  | IFetchDataForList | 品番マスタから単重のデータをfetch |
+| FetchGrossWeight           | IFetchDataForList | 品番マスタからの仕入製品重量データ(缶込重量)をfetch |
+| FetchUnsoutaiouHonsya      | IFetchDataForList | 本社のリードタイムと輸出向け先のデータをfetch |
+| FetchUnsoutaiouToke        | IFetchDataForList | 土気のリードタイムと輸出向け先のデータをfetch |
+| FetchSyukkaListCoa         | IFetchDataForList | 出荷添付リスト.xlsxの成績書シートを取り込む |
 | FetchSyukkaListSiteiDenpyo | IFetchDataForList | 出荷添付リスト.xlsxの指定伝票シートを取り込む |
-| CreateTssBat |   | IExcelOutput型のインスタンスに出荷実績照会、</br>業務_packing、成績書を作らせる |
-| SyukkaJissekiSyoukai | IExcelOutput | 最大で２個(本社分、土気分)のインスタンスが作られる。UriageForSyukkaJissekiのインスタンスをリストで保持。
-| AllPackings | IExcelOutput | 最大で２個(本社分、土気分)のインスタンスが作られる。</br>UriageForPacking, PackingForDenpyoのインスタンスをリストで保持。
-| HsCoa | IExcelOutput | 成績書の必要数分のインスタンスが作られる |
-| MhsCoa | IExcelOutput | 成績書の必要数分のインスタンスが作られる |
-| KoitoCoa | IExcelOutput | 成績書の必要数分のインスタンスが作られる |
-| PackingForDenpyo |   | 伝票の数だけインスタンスが作られる。</br>国内：得意先コード、納入先コード。</br>輸出：得意先コード、納入先コード、注文番号。自分の持っているuriageForPackingsの重量を合計して</br>uriageForPackingsのsumWeight変数に値をセット</br>することもしている。|
-| UriageForSyukkajisseki |   | 出荷実績照会作成用、成績書作成用の売上のインスタンス。売上製品のロット数分のインスタンスが作られる。 
-| UriageForPacking |   | 業務_packing作成用の売上のインスタンス。売上製品の数分のインスタンスが作られる。(ロットが分かれても数は増えない) IAddToYoteiSouko型のインスタンスを持ち、出荷予定倉庫リストに必要な要素を書き込んでもらう。
-| AddForCoa | IAddToYoteiSouko | 出荷予定倉庫に"成"を書き込む |
-| AddForSiteiDenpyo | IAddToYoteiSouko | 出荷予定倉庫に"指"を書き込む |
-| AddForEigyosyo | IAddToYoteiSouko | 出荷予定倉庫に"営業所"を書き込む |
-| AddForDohai | IAddToYoteiSouko | 出荷予定倉庫に"土配"を書き込む |
-| AddForWeekdayDiff | IAddToYoteiSouko | 出荷予定倉庫に"曜日"を書き込む |
-| CreateJson |    | List[Dict[str,Any]]からJson文字列を作る道具 |
-| CreateDictFromList |    | さまざまなListからDictを作る道具 |
-| GetIdx |    | カラムのリストとカラム名からインデックスNoを得る</br>道具。StaticMethod
-| Recorder |    | 文字列を渡して、標準出力とファイルに書き込んでもらう道具。
-
-
+| CreateTssBat               |                   | IExcelOutput型のインスタンスに出荷実績照会、</br>業務_packing、成績書を作らせる |
+| SyukkaJissekiSyoukai       | IExcelOutput      | 最大で２個(本社分、土気分)のインスタンスが作られる。UriageForSyukkaJissekiのインスタンスをリストで保持。
+| AllPackings                | IExcelOutput      | 最大で２個(本社分、土気分)のインスタンスが作られる。</br>UriageForPacking, PackingForDenpyoのインスタンスをリストで保持。
+| HsCoa                      | IExcelOutput      | 成績書の必要数分のインスタンスが作られる |
+| MhsCoa                     | IExcelOutput      | 成績書の必要数分のインスタンスが作られる |
+| KoitoCoa                   | IExcelOutput      | 成績書の必要数分のインスタンスが作られる |
+| PackingForDenpyo           |                   | 伝票の数だけインスタンスが作られる。</br>国内：得意先コード、納入先コード。</br>輸出：得意先コード、納入先コード、注文番号。自分の持っているuriageForPackingsの重量を合計して</br>uriageForPackingsのsumWeight変数に値をセット</br>することもしている。|
+| UriageForSyukkajisseki     |                   | 出荷実績照会作成用、成績書作成用の売上のインスタンス。売上製品のロット数分のインスタンスが作られる。 
+| UriageForPacking           |                   | 業務_packing作成用の売上のインスタンス。売上製品の数分のインスタンスが作られる。(ロットが分かれても数は増えない) IAddToYoteiSouko型のインスタンスを持ち、出荷予定倉庫リストに必要な要素を書き込んでもらう。
+| AddForCoa                  | IAddToYoteiSouko  | 出荷予定倉庫に"成"を書き込む |
+| AddForSiteiDenpyo          | IAddToYoteiSouko  | 出荷予定倉庫に"指"を書き込む |
+| AddForEigyosyo             | IAddToYoteiSouko  | 出荷予定倉庫に"営業所"を書き込む |
+| AddForDohai                | IAddToYoteiSouko  | 出荷予定倉庫に"土配"を書き込む |
+| AddForWeekdayDiff          | IAddToYoteiSouko  | 出荷予定倉庫に"曜日"を書き込む |
+| CreateJson                 |                   | List[Dict[str,Any]]からJson文字列を作る道具 |
+| CreateDictFromList         |                   | さまざまなListからDictを作る道具 |
+| GetIdx                     |                   | カラムのリストとカラム名からインデックスNoを得る</br>道具。StaticMethod |
+| Recorder                   |                   | 文字列を渡して、標準出力とファイルに書き込んでもらう道具。|
 
 
 ### クラス図
@@ -116,6 +115,10 @@ class FetchTnju{
     - cnxn:object
     + fetch_data()pd.DataFrame
 }
+class FetchGrossWeight{
+    - cnxn:object
+    + fetch_data()pd.DataFrame
+}
 class FetchUnsoutaiouHonsya{
     - cnxn:object
     + fetch_data()pd.DataFrame
@@ -141,6 +144,7 @@ InstanceFactory --> FetchCalenderUnsouya
 InstanceFactory --> FetchCalenderToyo
 InstanceFactory --> FetchProductCan
 InstanceFactory --> FetchTnju
+InstanceFactory --> FetchGrossWeight
 InstanceFactory --> FetchUnsoutaiouHonsya
 InstanceFactory --> FetchUnsoutaiouToke
 InstanceFactory --> FetchSyukkaListCoa
@@ -356,3 +360,18 @@ UriageForPacking o-- IAddToYoteiSouko
  {'output_name':'メタル品管シートCoa', 'excel_output':MhsCoa, 'exe_path':mhsCoaPath, 'output_path':mydir, 'barcodeFolder':mydir},
  {'output_name':'小糸Coa', 'excel_output':KoitoCoa, 'exe_path':koitoCoaPath, 'output_path':mydir, 'barcodeFolder':mydir}]`
 1. CreateTssBatのインスタンス生成、コンストラクタにexcel_outputs_argsを渡す。create_tssBatメソッドを呼び出して、出荷実績照会、業務packing、成績書を作って、所定のフォルダに入れる。
+
+### アウトプット連絡表
+|  関連        | ファイル名                 | 旧データ         | 新データ | テーブル |
+| :---:        | :---                      | :---             | :--- | :--- |
+| 受注Check(休日表)| order_holiday.csv         | \\192.168.1.247\共有\受注check\master | effitA 稼働日カレンダ</br>東洋=工場:@@@@@</br> 運送屋=工場:@0001,部門:DUMMY | MCALEN.CalFlg: "1" (休日) |
+| 受注Check(リードタイム)| order_nounyuusaki.csv     | \\192.168.1.247\共有\受注check\master | effitA 発送先別運送距離マスタ | MDESTN_U2002.DesLeadTime(int)|
+| 受注Check(向け先、製品)| n&h&m_modify..csv     | \\192.168.1.247\共有\受注check\master | これまでと同じ | noTable |
+| 出荷Robot(受注見込み)    | 受注見込みﾘｽﾄ.csv | \\192.168.1.247\共有\受注check\master | effitA 品番マスタ.ユーザ個別項目.受注見込区分</br>2:見込製品, 1:受注製品 | MHINCD.HinFree18(str) "2","1" |
+| 出荷Robot(仕入製品重量) | noFile | noData | effitA 品番マスタ.ユーザ個別項目.仕入製品重量(kg)</br> | MHINCD.HinFree19(str) "16.5" |
+| 出荷Robot(次回請求しない) | noFile | pickle | effitA 得意先マスタ.売上日基準請求区分=1:しない</br> | MTOKUI.TokFree3(str) "1" |
+| 出荷Robot(成,指) | 出荷時添付リスト.xlsx | \\192.168.1.247\共有\営業課フォルダ\櫻田\☆☆☆\売上処理(水野課長用) | これまでと同じ | noTable |
+| 出荷Robot(add) | add_cnt.csv | \\192.168.1.247\共有\営業課フォルダ\01出荷OutPut\addCount | effit 受注入力 | RJYUCD.RjcFree1(str) |
+| 受注入力(工場コード) | noFile | 摘要欄に「本社出荷」| 受注入力画面で入力| RJYUCD.RjcJcKojCD(str)"@0002" |
+| 運賃計算(運送対応表) | unsoutaiou_honsya.csv</br>unsoutaiou_toke.csv | \\192.168.1.247\共有\経理課\フォルダ\運賃計算関係 | effitA 発送先別運送距離マスタ</br>輸出向け先= "y":1, "":0</br>中継回数=1,2,3</br>行く行かない=0:行く, 1:行かない | MDESTN_U2002.DesIsExport(int)"y"=1,""=0 </br>MDSDST_U2002.DsdRelayCount(int)</br>MDSDST_U2002.DsdDisabled(int)0:行く,1:行かない |
+| 運賃計算(以下,未満) | noFile | noData | effitA 相手先名称マスタ</br>相手先区分=A</br>相手先コード1=U0007</br>重量閾値判定区分=1:未満,空白:以下 | MAITEM.AitFree1(str)"1",""</br>MAITEM.AitFree3(str)"1","" |

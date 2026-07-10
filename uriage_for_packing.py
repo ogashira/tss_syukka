@@ -13,7 +13,9 @@ class UriageForPacking:
                  yusyutu_dict: Dict[Tuple, str],
                  leadTime_dict: Dict[Tuple, int],
                  productCan_dic: Dict[str,str],
-                 tnju_dic: Dict[str, Any], recorder:Recorder,
+                 tnju_dic: Dict[str, Any], 
+                 grossWeight_dic: Dict[str, Any], 
+                 recorder:Recorder,
                  addToYoteiSoukos: Dict[str, IAddToYoteiSouko])-> None:
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
@@ -21,6 +23,7 @@ class UriageForPacking:
         self._leadTime_dict = leadTime_dict
         self._productCan_dic = productCan_dic
         self._tnju_dic = tnju_dic
+        self._grossWeight_dic = grossWeight_dic
         self._recorder = recorder
         self._addToYoteiSoukos = addToYoteiSoukos
         self._factory: str = dict_data['factory_name']
@@ -59,6 +62,7 @@ class UriageForPacking:
         self._出荷予定倉庫 = self._add_to_yoteiSouko()
 
 
+
     def _get_factory_name(self)-> str:
         if self._factory == '@0001':
             return '本社出荷'
@@ -79,6 +83,12 @@ class UriageForPacking:
 
     def _calc_weight(self)-> Decimal:
         weight: Decimal = Decimal('0')
+
+        # grossWeight_dicに重量が記載されていたらそれが缶込の重量
+        if self._hinban in self._grossWeight_dic:
+            weight_str = self._grossWeight_dic[self._hinban]
+            return Decimal(weight_str)
+        
         can_name = self._productCan_dic.get(self._hinban, '')
         can_weight = self._tnju_dic.get(can_name, Decimal('0')) 
         net = self._tnju_dic.get(self._hinban, Decimal('0'))

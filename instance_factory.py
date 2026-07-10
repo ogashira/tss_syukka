@@ -169,6 +169,15 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchGrossWeight(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchGrossWeight
+        ins_name: str = 'FetchGrossWeight'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchGrossWeight(cls._cnxn_effit)
+        return cls._instances[ins_name]
+
+
+    @classmethod
     def get_fetchCalenderUnsouya(cls, syukka_date: str) -> IFetchDataForList:
         from fetch_data_for_list import FetchCalenderUnsouya
         ins_name: str = 'fetchCalenderUnsouya'
@@ -267,6 +276,7 @@ class InstanceFactory:
                                 leadTime_dicts: Dict[str, Dict[Tuple,int]],
                                 productCan_dic: Dict[str,str],
                                 tnju_dic: Dict[str,Any], 
+                                grossWeight_dic: Dict[str,Any], 
                                 recorder: "Recorder",
                                 addToYoteiSoukos: Dict[str, IAddToYoteiSouko]
                                 )-> Tuple:
@@ -285,6 +295,7 @@ class InstanceFactory:
                                          leadTime_dicts['honsya'],
                                          productCan_dic,
                                          tnju_dic,
+                                         grossWeight_dic,
                                          recorder,
                                          addToYoteiSoukos)
                     uriageForPackings_honsya.append(uriageForPacking_instance)
@@ -295,6 +306,7 @@ class InstanceFactory:
                                          leadTime_dicts['toke'],
                                          productCan_dic,
                                          tnju_dic,
+                                         grossWeight_dic,
                                          recorder,
                                          addToYoteiSoukos)
                     uriageForPackings_toke.append(uriageForPacking_instance)

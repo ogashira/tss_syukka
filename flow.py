@@ -265,12 +265,18 @@ def start()-> None:
     sumi_for_packing_col, sumi_for_packing_data = data_fetch(sumi_for_packing, 
                                                              recorder)
 
-    ''' productCan, tnjuデータを取得して辞書にする '''
+    ''' productCan, tnju, grossWeightデータを取得して辞書にする '''
     productCan = InstanceFactory.get_fetchProductCan()
     productCan_col, productCan_data = data_fetch(productCan, recorder)
 
     tnju = InstanceFactory.get_fetchTnju()
     tnju_col, tnju_data = data_fetch(tnju, recorder)
+
+    # 缶込み重量(grossWeight)データ取得
+    MHINCDgrossWeight: IFetchDataForList = \
+                                         InstanceFactory.get_fetchGrossWeight()
+    grossWeight_col, grossWeight_data = data_fetch(MHINCDgrossWeight, recorder)
+
 
     try:
         productCan_dic:Dict[str,Any] = \
@@ -283,6 +289,11 @@ def start()-> None:
                                                      tnju_data,
                                                      'hinban',
                                                      'tnju')
+        grossWeight_dic:Dict[str,Any] = \
+            createDictFromList.create_dict_from_list(grossWeight_col, 
+                                                     grossWeight_data,
+                                                     'hinban',
+                                                     'grossWeight')
     except IndexError as e:
         recorder.out_log(e, '\n')
         recorder.out_file(e, '\n')
@@ -293,6 +304,7 @@ def start()-> None:
     calenderToyo = InstanceFactory.get_fetchCalenderToyo(syukka_date)
     calenderUnsoCol, calenderUnsoData = data_fetch(calenderUnso, recorder)
     calenderToyoCol, calenderToyoData = data_fetch(calenderToyo, recorder)
+
 
     ''' cnxnの消去>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     InstanceFactory.delete_cnxn
@@ -343,6 +355,7 @@ def start()-> None:
                     leadTime_dicts,
                     productCan_dic,
                     tnju_dic,
+                    grossWeight_dic,
                     recorder,
                     addToYoteiSoukos
                     )
