@@ -11,6 +11,7 @@ from fetch_data_for_list import IFetchDataForList
 from instance_factory import InstanceFactory
 from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai
 from create_tss_bat import CreateTssBat
+from show_to_excel import ShowToExcel
 
 # 実行時にはインポートせず、型チェックの為だけに書く
 if TYPE_CHECKING:
@@ -121,7 +122,7 @@ def start()-> None:
     exePath = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理\U2002_AUR020B.exe"
     # TODO "toyo_test"を"toyo"に変更する
     command_line = \
-      f'{exePath} \'"toyo_test","1","{staffCD}","{syukka_date}","","","","11"\''
+      f'{exePath} \'"toyo_test","1","{staffCD}","{syukka_date}","","","","92"\''
     powershell_path = os.path.join(os.environ['SystemRoot'], 'System32', 
                                   'WindowsPowerShell', 'v1.0', 'powershell.exe')
 
@@ -149,7 +150,7 @@ def start()-> None:
         recorder.out_file(txt, '\n')
         recorder.outLogFile_to_sameNumberOfChara(tyuzan_col, tyuzan_data)
     else:
-        txt += f'注残はありません。(^o^)\n' 
+        txt += rf'注残はありません。\(^o^)/\n' 
         recorder.out_log(txt, '\n')
         recorder.out_file(txt, '\n')
 
@@ -489,3 +490,17 @@ def start()-> None:
     createTssBat:CreateTssBat = \
             InstanceFactory.get_createTssBat(excel_outputs_args, recorder)
     createTssBat.create_tssBat()
+
+    '''業務packingに売上金額を追加する>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
+    slash: str = r'\\'
+    if platform.system() == 'Linux': slash = r'/'
+    if allPackings_honsya is not None:
+        book_honsya = f'{mydir}{slash}本社業務_packing.xlsx'
+        showToExcel = ShowToExcel(book_honsya, allPackings_honsya)
+        showToExcel.show_to_excel()
+        
+    if allPackings_toke is not None:
+        book_toke = f'{mydir}{slash}土気業務_packing.xlsx'
+        showToExcel = ShowToExcel(book_toke, allPackings_toke)
+        showToExcel.show_to_excel()
+    

@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Dict, Any, Set, Tuple
 from decimal import Decimal
@@ -163,6 +164,10 @@ class AllPackings(IExcelOutput):
         self._packing_json_str: str = self._create_packing_json_str()
 
 
+    def show_uriKin_for_excel(self, ws, myborder)-> None:
+        for denpyo in self._packingForDenpyos:
+            denpyo.show_uriKin_to_excel(ws, myborder)
+
 
     def _get_factoryName(self, factory_name)-> str:
         if factory_name == '@0001':
@@ -205,12 +210,34 @@ class PackingForDenpyo:
     def __init__(self, tokuiCD_tpl: Tuple[str,...], 
                  uriageForPackings: List["UriageForPacking"],
                  createJson:"CreateJson") -> None:
-        self._tokuiCD_tpl = tokuiCD_tpl
+        '''
+        tokuiCD_tpl = ('T1210', 'IDK05', 'IDC4446')または ('T3820', ' ')
+        '''
+        self._isExport = False 
+        if len(tokuiCD_tpl) == 3:
+            self._isExport = True
+        self._tokuiCD = ' '
+        self._nonyuCD = ' '
+        self._tyuban  = ' '
+        if self._isExport:
+            self._tokuiCD = tokuiCD_tpl[0]
+            self._nonyuCD = tokuiCD_tpl[1]
+            self._tyuban = tokuiCD_tpl[2] # 注文No
+        else:
+            self._tokuiCD = tokuiCD_tpl[0]
+            self._nonyuCD = tokuiCD_tpl[1]
+            self._tyuban = ' '
+
+
         self._uriageForPackings = uriageForPackings
         self._createJson = createJson
 
         '''ここで、uriageForPackingsに総重量sumWeightをセットする'''
         self._set_sumWeight_to_uriageForPacking()
+
+        '''売価を求める'''
+        self._uriKin = self._calc_sumUriKin()
+
 
     def _create_packing_dict(self, 
                           packing_dicts: List[Dict[str, Any]])-> None:
@@ -249,7 +276,50 @@ class PackingForDenpyo:
         for uriage in self._uriageForPackings:
             uriage.set_sumWeight(sumWeight)
 
-    '''<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'''
+    '''売価を求める(伝票ごと)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
+    def _calc_sumUriKin(self)-> Decimal:
+        sumUriKin: Decimal = Decimal('0')
+        for uriage in self._uriageForPackings:
+            sumUriKin = uriage.plus_myUriKin(sumUriKin)
+
+        return sumUriKin
+
+
+    def show_uriKin_to_excel(self, ws, myborder)-> None:
+        
+        def put_uriKin_for_export(i:int)-> None:
+            if ((ws.cell(i, 4).value == self._tokuiCD and
+                 ws.cell(i, 5).value == self._nonyuCD and
+                 ws.cell(i, 8).value == self._tyuban) and not 
+                (ws.cell(i + 1, 4).value == self._tokuiCD and
+                 ws.cell(i + 1, 5).value == self._nonyuCD and
+                 ws.cell(i + 1, 8).value == self._tyuban)):
+                # CDが同じで下の行が違っていたら
+                ws.cell(i, lastCol).value = self._uriKin
+                ws.cell(i, lastCol).border = myborder
+                ws.cell(i, lastCol).number_format = "#,##" # カンマ表記
+
+        def put_urikin_for_notExport(i:int)-> None:
+            if ((ws.cell(i, 4).value == self._tokuiCD and
+                 ws.cell(i, 5).value == self._nonyuCD) and not
+                (ws.cell(i + 1, 4).value == self._tokuiCD and
+                 ws.cell(i + 1, 5).value == self._nonyuCD)):
+                # CDが同じで下の行が違っていたら
+                ws.cell(i, lastCol).value = self._uriKin
+                ws.cell(i, lastCol).border = myborder
+                ws.cell(i, lastCol).number_format = "#,##" # カンマ表記
+
+        lastRow: int = ws.max_row
+        lastCol: int = ws.max_column
+        i: int = 0
+        for i in range(2, lastRow + 1):
+            if self._isExport:
+                put_uriKin_for_export(i)
+            else:
+                put_urikin_for_notExport(i)
+
+
+
 
 class HsCoa(IExcelOutput):
 

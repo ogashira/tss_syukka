@@ -3,7 +3,7 @@ from decimal import Decimal
 from recorder import Recorder
 from IAdd_to_yoteiSouko import IAddToYoteiSouko
 '''
-全ての型ヒントの判定を遅延評価する。UriageForPacking自信のクラス名を型ヒントとして
+全ての型ヒントの判定を遅延評価する。UriageForPacking自身のクラス名を型ヒントとして
 使っているので、エラーを出さないため。 61行目
 '''
 from typing import Dict, Any, Tuple, Set, List
@@ -207,6 +207,10 @@ class UriageForPacking:
 
     def set_sumWeight(self, sumWeight) -> None:
         self._sumWeight = sumWeight
+
+    def plus_myUriKin(self, sumUriKin)-> Decimal:
+        sumUriKin += self._売り金額
+        return sumUriKin
 
 
 
