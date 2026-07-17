@@ -54,9 +54,9 @@ class UriageForPacking:
         self._売り金額: int = dict_data['uriKin']
         self._売り単価: int = dict_data['uriTnk']
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
-        self._cans: int = self._calc_cans()
         self._出荷: str = self._get_factory_name() # 土気出荷、本社出荷
         self._hinban: str = self._calc_hinban()
+        self._cans: int = self._calc_cans()
         self._weight: Decimal = self._calc_weight()
         self._sumWeight:Decimal = Decimal('0')
         self._出荷予定倉庫 = self._add_to_yoteiSouko()
@@ -69,9 +69,14 @@ class UriageForPacking:
         return '土気出荷'
 
     def _calc_cans(self)-> int:
-        if self._受注単位 != 'CN':
-            return self._振替元数量
-        return self._受注数量
+        cans: int = 0
+        if self._受注単位 == 'CN':
+            return self._受注数量
+        if self._受注単位 == 'KG':
+            cans = self._受注数量 / (self._tnju_dic.get(self._hinban, 0) / 1000)
+            return cans
+        return cans
+
 
     def _calc_hinban(self)-> str:
         if self._受注単位 != 'CN':

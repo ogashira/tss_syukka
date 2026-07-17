@@ -84,6 +84,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " RURIDT.RurUriKin AS 'uriKin',"
                     " RURIDT.RurMBiko AS '備考',"
                     " RURIDT.RurKojFrom AS 'factory_name',"
+                    " RURMEI_U2002.RmeSeqNo AS 'renban',"
                     " RJYUCD.RjcFree1 AS 'add'"
                     " From dbo.RURIDT"
                     " JOIN dbo.RURIHD"
@@ -100,6 +101,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " ON RURIDT.RurJCNo = RJYUCD.RjcJCNo" 
                     " AND RURIDT.RurJGNo = RJYUCD.RjcJGNo"
                     " WHERE RURIDT.RurUriDay =" + self._syukka_date +
+                    " AND (RURMEI_U2002.RmeSeqNo = 0 OR RURMEI_U2002.RmeSeqNo IS Null) "
                     " AND RURIDT.RurTokCD < 'T6000'"
                     " AND RURIDT.RurTokCD <> 'T0000'"
                     " ORDER BY RURIDT.RurTokCD, RURIDT.RurNonyuCD, RURIDT.RurCMNo"
