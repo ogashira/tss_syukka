@@ -266,28 +266,6 @@ def start()-> None:
     sumi_for_packing_col, sumi_for_packing_data = data_fetch(sumi_for_packing, 
                                                              recorder)
 
-
-    #TODO
-    print(sumi_for_packing_data)
-    seqs = []
-    for line in sumi_for_packing_data:
-        seqs.append(line[19])
-
-    print(seqs)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     ''' productCan, tnju, grossWeightデータを取得して辞書にする '''
     productCan = InstanceFactory.get_fetchProductCan()
     productCan_col, productCan_data = data_fetch(productCan, recorder)
