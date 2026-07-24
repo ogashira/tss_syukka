@@ -65,28 +65,31 @@ class FetchUriageSumiForPacking(IFetchDataForList):
 
         cursor = self.cnxn.cursor()
 
-        sqlQuery = ("SELECT RURIDT.RurTokCD AS '得意先コード',"
-                    " RURIDT.RurNonyuCD AS '納入先コード',"
+        sqlQuery = ("SELECT RJYUCD.RjcTokCD AS '得意先コード',"
+                    " RJYUCD.RjcNonyuCD AS '納入先コード',"
                     " RURIHD.RurNonyuNam1 AS '納入先名称１',"
-                    " RURIDT.RurCMNo AS '得意先注文ＮＯ',"
+                    " RJYUCD.RjcCMNo AS '得意先注文ＮＯ',"
                     " RURIHD.RurUnsCD AS 'unsouCD',"
                     " MA_UNS.aitNam1 AS '依頼先',"
-                    " RURIDT.RurUriDay AS '出荷日',"
-                    " RURIDT.RurNODay AS '納期',"
-                    " RURIDT.RurHinCD AS '売り品番',"
-                    " RURIDT.RurHinNam AS '品名',"
-                    " RURIDT.RurKoSu AS 'uriKosu',"
-                    " RURIDT.RurKanriTniCD AS '受注単位',"
+                    " RJYUCD.RjcSKDay AS '出荷日',"
+                    " RJYUCD.RjcNODay AS '納期',"
+                    " RJYUCD.RjcHinCD AS '売り品番',"
+                    " RJYUCD.RjcHinNam AS '品名',"
+                    " RJYUCD.RjcKoSu AS 'uriKosu',"
+                    " RJYUCD.RjcTniCD AS '受注単位',"
                     " RURMEI_U2002.RmeMHinCD AS 'motoHinCD',"
                     " RURMEI_U2002.RmeMSu AS 'motoSu',"
                     " RURMEI_U2002.RmeMtniCD AS 'motoTni',"
-                    " RURIDT.RurUriTnk AS 'uriTnk',"
-                    " RURIDT.RurUriKin AS 'uriKin',"
-                    " RURIDT.RurMBiko AS '備考',"
-                    " RURIDT.RurKojFrom AS 'factory_name',"
-                    " RURMEI_U2002.RmeSeqNo AS 'renban',"
-                    " RJYUCD.RjcFree1 AS 'add'"
-                    " From dbo.RURIDT"
+                    " RJYUCD.RjcJcTnk AS 'uriTnk',"
+                    " RJYUCD.RjcJcKin AS 'uriKin',"
+                    " RJYUCD.RjcMBiko AS '備考',"
+                    " RJYUCD.RjcJcKojCD AS 'factory_name',"
+                    " RJYUCD.RjcFree1 AS 'add',"
+                    " RURMEI_U2002.RmeSeqNo AS 'renban'"
+                    " From dbo.RJYUCD"
+                    " LEFT JOIN dbo.RURIDT"
+                    " ON RJYUCD.RjcJCNo = RURIDT.RurJCNo" 
+                    " AND RJYUCD.RjcJGNo = RURIDT.RurJGNo" 
                     " JOIN dbo.RURIHD"
                     " ON RURIDT.RurUNo = RURIHD.RurUNo" 
                     " LEFT JOIN dbo.RURMEI_U2002"
@@ -97,16 +100,12 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                         " FROM dbo.MAITEM"
                         " WHERE MAITEM.AitAitKBN = 'A'" # A = 運送屋
                     ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
-                    " LEFT JOIN dbo.RJYUCD"
-                    " ON RURIDT.RurJCNo = RJYUCD.RjcJCNo" 
-                    " AND RURIDT.RurJGNo = RJYUCD.RjcJGNo"
-                    " WHERE RURIDT.RurUriDay =" + self._syukka_date +
+                    " WHERE RJYUCD.RjcSKDay =" + self._syukka_date +
                     " AND (RURMEI_U2002.RmeSeqNo = 0 OR RURMEI_U2002.RmeSeqNo IS Null) "
                     " AND RURIDT.RurTokCD < 'T6000'"
                     " AND RURIDT.RurTokCD <> 'T0000'"
-                    " ORDER BY RURIDT.RurTokCD, RURIDT.RurNonyuCD, RURIDT.RurCMNo"
+                    " ORDER BY RJYUCD.RjcTokCD, RJYUCD.RjcNonyuCD, RJYUCD.RjcCMNo"
                     )
-
         data_list: List[List[Any]] = []
         cursor.execute(sqlQuery)
 

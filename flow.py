@@ -138,6 +138,7 @@ def start()-> None:
         print('自動出荷処理エラーです', e)
 
 
+    # クラス変数にsql_server_effitのcnxnを格納する
     InstanceFactory.get_sql_server_effit()
 
     # 注残データを取得
