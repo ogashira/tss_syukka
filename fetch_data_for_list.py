@@ -90,7 +90,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " LEFT JOIN dbo.RURIDT"
                     " ON RJYUCD.RjcJCNo = RURIDT.RurJCNo" 
                     " AND RJYUCD.RjcJGNo = RURIDT.RurJGNo" 
-                    " JOIN dbo.RURIHD"
+                    " LEFT JOIN dbo.RURIHD"
                     " ON RURIDT.RurUNo = RURIHD.RurUNo" 
                     " LEFT JOIN dbo.RURMEI_U2002"
                     " ON RURIDT.RurUNo = RURMEI_U2002.RmeUNo"
@@ -102,8 +102,8 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
                     " WHERE RJYUCD.RjcSKDay =" + self._syukka_date +
                     " AND (RURMEI_U2002.RmeSeqNo = 0 OR RURMEI_U2002.RmeSeqNo IS Null) "
-                    " AND RURIDT.RurTokCD < 'T6000'"
-                    " AND RURIDT.RurTokCD <> 'T0000'"
+                    " AND RJYUCD.RjcTokCD < 'T6000'"
+                    " AND RJYUCD.RjcTokCD <> 'T0000'"
                     " ORDER BY RJYUCD.RjcTokCD, RJYUCD.RjcNonyuCD, RJYUCD.RjcCMNo"
                     )
         data_list: List[List[Any]] = []
