@@ -67,7 +67,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
 
         sqlQuery = ("SELECT RJYUCD.RjcTokCD AS '得意先コード',"
                     " RJYUCD.RjcNonyuCD AS '納入先コード',"
-                    " RURIHD.RurNonyuNam1 AS '納入先名称１',"
+                    " MA_NAM.AitNam1 AS '納入先名称１',"
                     " RJYUCD.RjcCMNo AS '得意先注文ＮＯ',"
                     " RURIHD.RurUnsCD AS 'unsouCD',"
                     " MA_UNS.aitNam1 AS '依頼先',"
@@ -95,6 +95,13 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " LEFT JOIN dbo.RURMEI_U2002"
                     " ON RURIDT.RurUNo = RURMEI_U2002.RmeUNo"
                     " AND RURIDT.RurUGNo = RURMEI_U2002.RmeUGNo"
+                    " LEFT JOIN(" 
+                        " SELECT MAITEM.AitCD1, MAITEM.AitCD2," 
+                        " MAITEM.AitNam1"
+                        " FROM dbo.MAITEM"
+                        " WHERE MAITEM.AitCD1 LIKE 'T%'" # T???? 
+                    ")MA_NAM ON RJYUCD.RjcTokCD = MA_NAM.AitCD1"
+                    " AND RJYUCD.RjcNonyuCD = MA_NAM.AitCD2"
                     " LEFT JOIN(" 
                         " SELECT MAITEM.AitCD1, MAITEM.AitNam1" 
                         " FROM dbo.MAITEM"
