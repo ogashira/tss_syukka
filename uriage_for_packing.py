@@ -47,9 +47,6 @@ class UriageForPacking:
 
         self._振替元品番: str = dict_data['motoHinCD']
 
-        self._振替元数量: int = 0
-        if dict_data['motoSu'] is not None:
-            self._振替元数量: int = dict_data['motoSu']
 
         self._売り金額: int = dict_data['uriKin']
         self._売り単価: int = dict_data['uriTnk']
@@ -68,6 +65,14 @@ class UriageForPacking:
             return '本社出荷'
         return '土気出荷'
 
+    def _calc_hinban(self)-> str:
+        if self._受注単位 != 'CN':
+            return self._振替元品番
+        if self._振替元品番 is not None: # Noneではなく、２文字以上の文字があったら
+            if len(self._振替元品番) > 2:
+                return self._振替元品番
+        return self._売り品番
+
     def _calc_cans(self)-> int:
         cans: int = 0
         if self._受注単位 == 'CN':
@@ -77,18 +82,8 @@ class UriageForPacking:
             return cans
         return cans
 
-
-    def _calc_hinban(self)-> str:
-        if self._受注単位 != 'CN':
-            return self._振替元品番
-        if self._振替元品番 is not None: # Noneではなく、２文字以上の文字があったら
-            if len(self._振替元品番) > 2:
-                return self._振替元品番
-        return self._売り品番
-
     def _calc_weight(self)-> Decimal:
         weight: Decimal = Decimal('0')
-
         # grossWeight_dicに重量が記載されていたらそれが缶込の重量
         if self._hinban in self._grossWeight_dic:
             weight_str = self._grossWeight_dic[self._hinban]
@@ -108,6 +103,7 @@ class UriageForPacking:
             self._recorder.out_file(txt)
 
         weight = (can_weight + net) / 1000
+
 
         return weight
 

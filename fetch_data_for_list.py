@@ -77,24 +77,20 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " RJYUCD.RjcHinNam AS '品名',"
                     " RJYUCD.RjcKoSu AS 'uriKosu',"
                     " RJYUCD.RjcTniCD AS '受注単位',"
-                    " RURMEI_U2002.RmeMHinCD AS 'motoHinCD',"
-                    " RURMEI_U2002.RmeMSu AS 'motoSu',"
-                    " RURMEI_U2002.RmeMtniCD AS 'motoTni',"
+                    " MHINCD.HinFree11 AS 'motoHinCD',"
                     " RJYUCD.RjcJcTnk AS 'uriTnk',"
                     " RJYUCD.RjcJcKin AS 'uriKin',"
                     " RJYUCD.RjcMBiko AS '備考',"
                     " RJYUCD.RjcJcKojCD AS 'factory_name',"
-                    " RJYUCD.RjcFree1 AS 'add',"
-                    " RURMEI_U2002.RmeSeqNo AS 'renban'"
+                    " RJYUCD.RjcFree1 AS 'add'"
                     " From dbo.RJYUCD"
                     " LEFT JOIN dbo.RURIDT"
                     " ON RJYUCD.RjcJCNo = RURIDT.RurJCNo" 
                     " AND RJYUCD.RjcJGNo = RURIDT.RurJGNo" 
                     " LEFT JOIN dbo.RURIHD"
                     " ON RURIDT.RurUNo = RURIHD.RurUNo" 
-                    " LEFT JOIN dbo.RURMEI_U2002"
-                    " ON RURIDT.RurUNo = RURMEI_U2002.RmeUNo"
-                    " AND RURIDT.RurUGNo = RURMEI_U2002.RmeUGNo"
+                    " LEFT JOIN dbo.MHINCD"
+                    " ON RJYUCD.RjcHinCD = MHINCD.HinHinCD"
                     " LEFT JOIN(" 
                         " SELECT MAITEM.AitCD1, MAITEM.AitCD2," 
                         " MAITEM.AitNam1"
@@ -108,11 +104,11 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                         " WHERE MAITEM.AitAitKBN = 'A'" # A = 運送屋
                     ")MA_UNS ON RURIHD.RurUnsCD = MA_UNS.AitCD1"
                     " WHERE RJYUCD.RjcSKDay =" + self._syukka_date +
-                    " AND (RURMEI_U2002.RmeSeqNo = 0 OR RURMEI_U2002.RmeSeqNo IS Null) "
                     " AND RJYUCD.RjcTokCD < 'T6000'"
                     " AND RJYUCD.RjcTokCD <> 'T0000'"
                     " ORDER BY RJYUCD.RjcTokCD, RJYUCD.RjcNonyuCD, RJYUCD.RjcCMNo"
                     )
+
         data_list: List[List[Any]] = []
         cursor.execute(sqlQuery)
 
