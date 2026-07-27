@@ -151,9 +151,10 @@ def start()-> None:
         recorder.out_file(txt, '\n')
         recorder.outLogFile_to_sameNumberOfChara(tyuzan_col, tyuzan_data)
     else:
-        txt += rf'注残はありません。\(^o^)/\n' 
+        txt += rf'注残はありません。' 
+        recorder.out_file(txt)
+        txt += ' ✊️ \n' 
         recorder.out_log(txt, '\n')
-        recorder.out_file(txt, '\n')
 
 
     sumi = InstanceFactory.get_fetchUriageSumi(syukka_date)
@@ -505,4 +506,8 @@ def start()-> None:
         book_toke = f'{mydir}{slash}土気業務_packing.xlsx'
         showToExcel = ShowToExcel(book_toke, allPackings_toke)
         showToExcel.show_to_excel()
-    
+
+
+    txt = 'プログラムは無事終了しました。'
+    recorder.out_log(txt, '\n')
+    recorder.out_file(txt, '\n')

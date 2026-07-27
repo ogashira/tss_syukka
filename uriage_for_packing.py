@@ -37,7 +37,7 @@ class UriageForPacking:
         self._備考: str = dict_data['備考']
         self._出荷日: str = dict_data['出荷日']
         self._納期: str = dict_data['納期']
-        self._受注数量: int = dict_data['uriKosu']
+        self._受注数量: Decimal = dict_data['uriKosu']
         self._受注単位: str = dict_data['受注単位']
 
         add: int = 0
@@ -76,9 +76,12 @@ class UriageForPacking:
     def _calc_cans(self)-> int:
         cans: int = 0
         if self._受注単位 == 'CN':
-            return self._受注数量
+            return int(self._受注数量)
         if self._受注単位 == 'KG':
-            cans = self._受注数量 / (self._tnju_dic.get(self._hinban, 0) / 1000)
+            if self._tnju_dic.get(self._hinban, 0) == 0:
+                return 0
+            cans = int(self._受注数量 / (self._tnju_dic[self._hinban] 
+                                                     / Decimal('1000')))
             return cans
         return cans
 
