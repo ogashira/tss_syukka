@@ -161,6 +161,9 @@ def start()-> None:
     sumi_data = []
     sumi_col, sumi_data = data_fetch(sumi, recorder)
 
+    #TODO
+    print(sumi_data)
+
     if not sumi_data:
         txt = f'{syukka_date}の売上データがありません。処理を中止します'
         recorder.out_log(txt, '\n')

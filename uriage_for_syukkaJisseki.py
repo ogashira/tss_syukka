@@ -2,6 +2,7 @@ from __future__ import annotations
 import glob
 import shutil
 import subprocess
+from decimal import Decimal
 from typing import Dict, Any, Tuple, Set, List, Optional
 from get_idx import GetIdx
 from recorder import Recorder
@@ -28,7 +29,7 @@ class UriageForSyukkaJisseki:
         self._hinban: str = dict_data['hinban'] # S6-SV3800-1-U, S6-UV361-U
         self._品名: str = dict_data['品名']
         self._lot: str = dict_data['lot']
-        self._受注数量: int = dict_data['受注数量']
+        self._受注数量: Decimal = dict_data['受注数量']
         self._受注単位: str = dict_data['受注単位']
         self._納入先名称１: str = dict_data['納入先名称１']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
@@ -37,7 +38,7 @@ class UriageForSyukkaJisseki:
         self._納入先名: str = dict_data['納入先名']
         self._motoHinCD: str = dict_data['motoHinCD'] # 振替元品番
         self._motoTni: str = dict_data['motoTni']     # 振替元単位
-        self._振替元数量: int = dict_data['振替元数量']
+        self._振替元数量: Decimal = dict_data['振替元数量']
         self._cans: int = self._calc_cans()
         self._輸出向先: str = self._calc_yusyutu_mukesaki()
         self._hinban_for_coa: str = self._get_hinban_for_coa()
@@ -73,9 +74,10 @@ class UriageForSyukkaJisseki:
 
 
     def _calc_cans(self)-> int:
-        if self._受注単位 != 'CN':
-            return self._振替元数量
-        return self._受注数量
+        if self._受注単位 == 'CN':
+            return int(self._受注数量)
+        if self._振替元数量 is not None: 
+            return int(self._振替元数量)
 
     def _calc_yusyutu_mukesaki(self)-> str:
         yusyutu_mukesaki = ''
