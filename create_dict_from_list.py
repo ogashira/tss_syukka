@@ -158,6 +158,17 @@ class CreateDictFromList:
         return dict_YMD_holiday
 
 
+    def create_noJikailist(self, col: List[str], data: List[Any]) -> List[str]:
+
+        noJikaiList: List[str] = []
+        tokuiCD_idx = GetIdx.get_idx(col, 'tokuiCD')
+        noJikai_idx = GetIdx.get_idx(col, 'noJikai')
+        for line in data:
+            if line[noJikai_idx] == '1':
+                noJikaiList.append(line[tokuiCD_idx])
+        return noJikaiList
+            
+
 
         
 

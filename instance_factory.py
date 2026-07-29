@@ -4,7 +4,7 @@ import sys
 from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings, \
         HsCoa, MhsCoa, KoitoCoa
 from IAdd_to_yoteiSouko import AddForCoa, AddForSiteiDenpyo, AddForEigyosyo, \
-        AddForDohai, AddForWeekdayDiff, IAddToYoteiSouko
+        AddForDohai, AddForWeekdayDiff, AddForJikai, IAddToYoteiSouko
 from fetch_data_for_list import IFetchDataForList
 
 # 実行時にはインポートせず、型チェックの為だけに書く
@@ -194,6 +194,16 @@ class InstanceFactory:
         if ins_name not in cls._instances:
             cls._instances[ins_name] = FetchCalenderToyo(
                                   cls._cnxn_effit, syukka_date)
+        return cls._instances[ins_name]
+
+
+    @classmethod
+    def get_fetchTokui(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchTokui
+        ins_name: str = 'fetchTokui'
+        if ins_name not in cls._instances:
+            cls._instances[ins_name] = FetchTokui(
+                                  cls._cnxn_effit)
         return cls._instances[ins_name]
 
 
@@ -420,3 +430,8 @@ class InstanceFactory:
         return addForWeekdayDiff
 
 
+    @classmethod
+    def get_addForJikai(cls, close_days: Dict[str, str],
+                        noJikais: List[str])-> IAddToYoteiSouko:
+        addForJikai: IAddToYoteiSouko = AddForJikai(close_days, noJikais)  
+        return addForJikai

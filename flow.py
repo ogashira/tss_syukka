@@ -309,6 +309,15 @@ def start()-> None:
     calenderUnsoCol, calenderUnsoData = data_fetch(calenderUnso, recorder)
     calenderToyoCol, calenderToyoData = data_fetch(calenderToyo, recorder)
 
+    # TOKUIデータ取得　closeDayを得る
+    fetchTokui: IFetchDataForList = InstanceFactory.get_fetchTokui()
+    close_col, close_data = data_fetch(fetchTokui, recorder)
+    # close_dataを辞書にする
+    close_days:Dict[str, str] = createDictFromList.create_dict_from_list(
+            close_col, close_data, 'tokuiCD', 'closeDay')
+    # noJikais 次回請求しない得意先コードのリストを作る
+    noJikais: List[str] = createDictFromList.create_noJikailist(
+                                                   close_col, close_data)
 
     ''' cnxnの消去>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     InstanceFactory.delete_cnxn
@@ -335,12 +344,16 @@ def start()-> None:
                                           tenpSitei_dicts)
     addForEigyosyo: IAddToYoteiSouko =    InstanceFactory.get_addForEigyosyo()
     addForDohai: IAddToYoteiSouko =       InstanceFactory.get_addForDohai()
+    addForJikai: IAddToYoteiSouko =       InstanceFactory.get_addForJikai(
+                                                                     close_days,
+                                                                     noJikais)
     addToYoteiSoukos: Dict[str, IAddToYoteiSouko] = {}
     addToYoteiSoukos['coa'] = addForCoa
     addToYoteiSoukos['siteiDenpyo'] = addForSiteiDenpyo
     addToYoteiSoukos['eigyosyo'] = addForEigyosyo
     addToYoteiSoukos['dohai'] = addForDohai
     addToYoteiSoukos['weekdayDiff'] = addForWeekdayDiff
+    addToYoteiSoukos['jikai'] = addForJikai
 
 
     #sumi_for_packing_col, sumi_for_packing_dataを辞書にする

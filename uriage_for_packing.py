@@ -166,6 +166,7 @@ class UriageForPacking:
         addToYoteiSoukos['eigyosyo'] = addForEigyosyo
         addToYoteiSoukos['dohai'] = addForDohai
         addToYoteiSoukos['weekdayDiff'] = addForWeekdayDiff
+        addToYoteiSoukos['jikai'] = addForWeekdayDiff
         '''
         yoteiSoukos: List[str] = []
 
@@ -182,6 +183,9 @@ class UriageForPacking:
         self._addToYoteiSoukos['coa'].add_to_yoteiSouko(
                             yoteiSoukos, self._得意先コード, self._納入先コード,
                             self._hinban)
+        self._addToYoteiSoukos['jikai'].add_to_yoteiSouko(
+                            yoteiSoukos, self._出荷日, self._納期,
+                            self._得意先コード)
 
         return yoteiSoukos
 
