@@ -205,6 +205,7 @@ class AllPackings(IExcelOutput):
         self._recorder.out_file(code_txt, '\n')
 
 
+
 class PackingForDenpyo:
 
     def __init__(self, tokuiCD_tpl: Tuple[str,...], 

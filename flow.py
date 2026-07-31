@@ -5,11 +5,11 @@ import sys
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Set, Tuple, TYPE_CHECKING, Optional
+from typing import List, Dict, Any, Set, Tuple, TYPE_CHECKING, Optional, cast
 from IAdd_to_yoteiSouko import IAddToYoteiSouko
 from fetch_data_for_list import IFetchDataForList
 from instance_factory import InstanceFactory
-from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai
+from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
 from create_tss_bat import CreateTssBat
 from show_to_excel import ShowToExcel
 
@@ -319,6 +319,30 @@ def start()-> None:
     noJikais: List[str] = createDictFromList.create_noJikailist(
                                                    close_col, close_data)
 
+    # calcUntin_dataを取得
+    calcUntin_honsya = InstanceFactory.get_fetchCalcUntin(syukka_date, '@0001')
+    calcUntin_toke = InstanceFactory.get_fetchCalcUntin(syukka_date, '@0002')
+    unsouNameHonsya_col, unsouNameHonsya_data = \
+                                          data_fetch(calcUntin_honsya, recorder)
+    unsouNameToke_col, unsouNameToke_data = \
+                                          data_fetch(calcUntin_toke, recorder)
+    # unsouNames_toke:Dict, unsouNames_honsya:Dictを作る
+    # {'静岡県焼津市保福島569': '新潟', '愛知県名古屋市xxxxx': 'ケイヒン'...}
+    unsouNames_honsya = {}
+    unsouNames_toke = {}
+    if unsouNameHonsya_data:
+        unsouNames_honsya = \
+                createDictFromList.create_dict_from_list(unsouNameHonsya_col,
+                                                         unsouNameHonsya_data,
+                                                         'address',
+                                                         'unsouName')
+    if unsouNameToke_data:
+        unsouNames_toke = \
+                createDictFromList.create_dict_from_list(unsouNameToke_col,
+                                                         unsouNameToke_data,
+                                                         'address',
+                                                         'unsouName')
+
     ''' cnxnの消去>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     InstanceFactory.delete_cnxn
     '''>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
@@ -363,7 +387,6 @@ def start()-> None:
                                                      sumi_for_packing_col, 
                                                      sumi_for_packing_data)
 
-
     #UriageForPackingインスタンス生成し、uriageForPackings_toke, uriageForPackings_honsyaに分ける
     uriagePackings: Tuple[List, List] = \
             InstanceFactory.get_uriageForPackingsHonsyaToke(
@@ -374,7 +397,9 @@ def start()-> None:
                     tnju_dic,
                     grossWeight_dic,
                     recorder,
-                    addToYoteiSoukos
+                    addToYoteiSoukos,
+                    unsouNames_honsya,
+                    unsouNames_toke
                     )
 
     uriageForPackings_honsya: List["UriageForPacking"] = uriagePackings[0]
@@ -400,6 +425,9 @@ def start()-> None:
                                '@0001',
                                createDictFromList,
                                recorder)
+
+
+
     
     '''ここから検査成績書>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     #dic_uriages_for_coa = 

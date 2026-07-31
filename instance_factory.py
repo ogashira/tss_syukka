@@ -208,6 +208,15 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchCalcUntin(cls, syukka_date: str, 
+                           factory: str) -> IFetchDataForList:
+        from fetch_data_for_list import FetchCalcUntin
+        fetchCalcUntin: IFetchDataForList = FetchCalcUntin(cls._cnxn_effit, 
+                                                           syukka_date, factory)
+        return fetchCalcUntin
+
+
+    @classmethod
     def get_createJson(cls) -> "CreateJson":
         from create_json import CreateJson
         ins_name: str = 'createJson'
@@ -288,7 +297,9 @@ class InstanceFactory:
                                 tnju_dic: Dict[str,Any], 
                                 grossWeight_dic: Dict[str,Any], 
                                 recorder: "Recorder",
-                                addToYoteiSoukos: Dict[str, IAddToYoteiSouko]
+                                addToYoteiSoukos: Dict[str, IAddToYoteiSouko],
+                                unsouNames_honsya: Dict[str, str],
+                                unsouNames_toke: Dict[str, str]
                                 )-> Tuple:
         #yusyutu_dict = {('T0060', 'H172'): 'y', ('T0060', ''): '',.....}
         # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
@@ -307,7 +318,8 @@ class InstanceFactory:
                                          tnju_dic,
                                          grossWeight_dic,
                                          recorder,
-                                         addToYoteiSoukos)
+                                         addToYoteiSoukos,
+                                         unsouNames_honsya)
                     uriageForPackings_honsya.append(uriageForPacking_instance)
                 else:
                     uriageForPacking_instance: UriageForPacking = \
@@ -318,7 +330,8 @@ class InstanceFactory:
                                          tnju_dic,
                                          grossWeight_dic,
                                          recorder,
-                                         addToYoteiSoukos)
+                                         addToYoteiSoukos,
+                                         unsouNames_toke)
                     uriageForPackings_toke.append(uriageForPacking_instance)
 
             cls._instances[ins_name] = (uriageForPackings_honsya, 

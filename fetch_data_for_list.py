@@ -68,6 +68,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
         sqlQuery = ("SELECT RJYUCD.RjcTokCD AS '得意先コード',"
                     " RJYUCD.RjcNonyuCD AS '納入先コード',"
                     " MA_NAM.AitNam1 AS '納入先名称１',"
+                    " MA_NAM.AitAddr1 AS '納入先住所１',"
                     " RJYUCD.RjcCMNo AS '得意先注文ＮＯ',"
                     " RURIHD.RurUnsCD AS 'unsouCD',"
                     " MA_UNS.aitNam1 AS '依頼先',"
@@ -93,7 +94,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " ON RJYUCD.RjcHinCD = MHINCD.HinHinCD"
                     " LEFT JOIN(" 
                         " SELECT MAITEM.AitCD1, MAITEM.AitCD2," 
-                        " MAITEM.AitNam1"
+                        " MAITEM.AitNam1, MAITEM.AitAddr1"
                         " FROM dbo.MAITEM"
                         " WHERE MAITEM.AitCD1 LIKE 'T%'" # T???? 
                     ")MA_NAM ON RJYUCD.RjcTokCD = MA_NAM.AitCD1"
@@ -557,6 +558,50 @@ class FetchUnsoutaiouToke(IFetchDataForList):
         return columns, data_list
         '''
 
+class FetchCalcUntin(IFetchDataForList):
+
+    def __init__(self, cnxn, syukkabi:str, factory:str) -> None:
+        self.cnxn = cnxn
+        self._syukkabi = syukkabi
+        self._factory = factory
+        
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT RFEEHI_U2002.FeeKojCD AS 'factoryCD',"
+                    " RFEEHI_U2002.FeeAddress AS 'address',"
+                    " MA_UNS.AitNam1 AS 'unsouName'"
+                    " From dbo.RFEEHI_U2002"
+                    " LEFT JOIN(" 
+                        " SELECT MAITEM.AitCD1, MAITEM.AitNam1" 
+                        " FROM dbo.MAITEM"
+                        " WHERE MAITEM.AitAitKBN = 'A'" # A = 運送屋
+                    ")MA_UNS ON RFEEHI_U2002.FeeCompanyCD = MA_UNS.AitCD1"
+                    " WHERE FeeSKDay = '" + self._syukkabi + "'"
+                    " AND FeeKojCD = '"+ self._factory + "'"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchCalcUntin') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+        
 
 class FetchTokui(IFetchDataForList):
 

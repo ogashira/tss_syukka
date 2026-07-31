@@ -16,7 +16,8 @@ class UriageForPacking:
                  tnju_dic: Dict[str, Any], 
                  grossWeight_dic: Dict[str, Any], 
                  recorder:Recorder,
-                 addToYoteiSoukos: Dict[str, IAddToYoteiSouko])-> None:
+                 addToYoteiSoukos: Dict[str, IAddToYoteiSouko],
+                 unsouNames: Dict[str, str])-> None:
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
@@ -26,11 +27,14 @@ class UriageForPacking:
         self._grossWeight_dic = grossWeight_dic
         self._recorder = recorder
         self._addToYoteiSoukos = addToYoteiSoukos
+        self._unsouNames = unsouNames
         self._factory: str = dict_data['factory_name']
-        self._依頼先: str = dict_data['依頼先']
         self._得意先コード: str = dict_data['得意先コード']
         self._納入先コード: str = dict_data['納入先コード']
         self._納入先名称１: str = dict_data['納入先名称１']
+        self._address: str = dict_data['納入先住所１']
+        self._unsouName: str = dict_data['依頼先'] #売上済から得た運送屋
+        self._依頼先: str = self._get_unsouName() # 売上不可の場合は運賃計算結果から
         self._売り品番: str = dict_data['売り品番']
         self._品名: str = dict_data['品名']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
@@ -58,6 +62,18 @@ class UriageForPacking:
         self._sumWeight:Decimal = Decimal('0')
         self._出荷予定倉庫 = self._add_to_yoteiSouko()
 
+
+    def _get_unsouName(self)-> str:
+        if self._unsouName is not None:
+            return self._unsouName
+        if self._unsouName != '':
+            return self._unsouName
+        if self._unsouName != ' ':
+            return self._unsouName
+
+        unsouName:str = self._unsouNames.get(self._address, '')
+
+        return  unsouName
 
 
     def _get_factory_name(self)-> str:
@@ -219,6 +235,3 @@ class UriageForPacking:
     def plus_myUriKin(self, sumUriKin)-> Decimal:
         sumUriKin += self._売り金額
         return sumUriKin
-
-
-
