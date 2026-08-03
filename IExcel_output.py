@@ -142,10 +142,11 @@ class AllPackings(IExcelOutput):
         for uriage in uriages:
             uriage.create_setPacking(setPacking)
         '''setPacking
-        {('T1210', 'IDK05', 'IDC4446'), ('T3820', ' '), ('T2880', 'H172'), ('T1039', ' '), ('T3500', 'H189'), ('T0320', ' '), ('T0060', ' '), ('T0020', ' ')}
+        {('T1210', 'IDK05', 'IDC4446', ''), ('T3820', ' ', '1営業所止め'), ('T2880', 'H172',' '), ('T1039', ' ', ' '), ('T3500', 'H189', ''), ('T0320', ' ', ' '), ('T0060', ' ', '11営業持参'), ('T0020', ' ', ' ')}
         '''
         listPacking = list(setPacking)
         sortedPacking = sorted(listPacking)
+
         
         # packingタプルとUriageForPackingリストの辞書を作る
         packingDict:Dict[Tuple[str], List[UriageForPacking]] = {}
@@ -212,22 +213,25 @@ class PackingForDenpyo:
                  uriageForPackings: List["UriageForPacking"],
                  createJson:"CreateJson") -> None:
         '''
-        tokuiCD_tpl = ('T1210', 'IDK05', 'IDC4446')または ('T3820', ' ')
+        tokuiCD_tpl = ('T1210', 'IDK05', 'IDC4446', ' ')または ('T3820', ' ', '1営業所止め')
         '''
         self._isExport = False 
-        if len(tokuiCD_tpl) == 3:
+        if len(tokuiCD_tpl) == 4:
             self._isExport = True
+
         self._tokuiCD = ' '
         self._nonyuCD = ' '
         self._tyuban  = ' '
+        self._bikou = ' '
         if self._isExport:
             self._tokuiCD = tokuiCD_tpl[0]
             self._nonyuCD = tokuiCD_tpl[1]
             self._tyuban = tokuiCD_tpl[2] # 注文No
+            self._bikou = tokuiCD_tpl[3]
         else:
             self._tokuiCD = tokuiCD_tpl[0]
             self._nonyuCD = tokuiCD_tpl[1]
-            self._tyuban = ' '
+            self._bikou = tokuiCD_tpl[2]
 
 
         self._uriageForPackings = uriageForPackings
@@ -238,6 +242,7 @@ class PackingForDenpyo:
 
         '''売価を求める'''
         self._uriKin = self._calc_sumUriKin()
+
 
 
     def _create_packing_dict(self, 
@@ -289,22 +294,38 @@ class PackingForDenpyo:
     def show_uriKin_to_excel(self, ws, myborder)-> None:
         
         def put_uriKin_for_export(i:int)-> None:
+            bikou:str = self._bikou
+            if bikou[:2] == '11':
+                bikou = self._bikou[2:]
+            if bikou[:1] == '1':
+                bikou = self._bikou[1:]
+
             if ((ws.cell(i, 4).value == self._tokuiCD and
                  ws.cell(i, 5).value == self._nonyuCD and
-                 ws.cell(i, 8).value == self._tyuban) and not 
+                 ws.cell(i, 8).value == self._tyuban and 
+                 bikou in ws.cell(i, 9).value) and not 
                 (ws.cell(i + 1, 4).value == self._tokuiCD and
                  ws.cell(i + 1, 5).value == self._nonyuCD and
-                 ws.cell(i + 1, 8).value == self._tyuban)):
+                 ws.cell(i + 1, 8).value == self._tyuban and
+                 bikou in ws.cell(i + 1, 9).value)):
                 # CDが同じで下の行が違っていたら
                 ws.cell(i, lastCol).value = self._uriKin
                 ws.cell(i, lastCol).border = myborder
                 ws.cell(i, lastCol).number_format = "#,##" # カンマ表記
 
         def put_urikin_for_notExport(i:int)-> None:
+            bikou:str = self._bikou
+            if bikou[:2] == '11':
+                bikou = self._bikou[2:]
+            if bikou[:1] == '1':
+                bikou = self._bikou[1:]
+
             if ((ws.cell(i, 4).value == self._tokuiCD and
-                 ws.cell(i, 5).value == self._nonyuCD) and not
+                 ws.cell(i, 5).value == self._nonyuCD and 
+                 bikou in ws.cell(i, 9).value) and not
                 (ws.cell(i + 1, 4).value == self._tokuiCD and
-                 ws.cell(i + 1, 5).value == self._nonyuCD)):
+                 ws.cell(i + 1, 5).value == self._nonyuCD and
+                 bikou in ws.cell(i + 1, 9).value)): 
                 # CDが同じで下の行が違っていたら
                 ws.cell(i, lastCol).value = self._uriKin
                 ws.cell(i, lastCol).border = myborder

@@ -1,5 +1,6 @@
 from __future__ import annotations 
 from decimal import Decimal
+from re import I
 from recorder import Recorder
 from IAdd_to_yoteiSouko import IAddToYoteiSouko
 '''
@@ -64,11 +65,8 @@ class UriageForPacking:
 
 
     def _get_unsouName(self)-> str:
-        if self._unsouName is not None:
-            return self._unsouName
-        if self._unsouName != '':
-            return self._unsouName
-        if self._unsouName != ' ':
+        if not (self._unsouName is None or 
+            self._unsouName == '' or self._unsouName == ' '):
             return self._unsouName
 
         unsouName:str = self._unsouNames.get(self._address, '')
@@ -140,35 +138,58 @@ class UriageForPacking:
 
 
     def create_setPacking(self, setPacking: Set[Tuple]) -> None:
+        '''
+        備考に'営業所止め', '支店止め', '営業所どめ', '支店どめ'
+        があったら、先頭に'1'を付ける。
+        営業持参があったら、先頭に'11'を付ける。
+        後で、ソートした時に、うまくまとまるようにする。
+        '''
+        def add_no(bikou:str)-> str:
+            if ('営業所止め' in bikou or '支店止め' in bikou or  
+                '営業所どめ' in bikou or  '支店どめ' in bikou):
+                return '1' + bikou
+            if '営業持参' in  bikou:
+                return  '11' + bikou
+            return bikou
+
+
+        bikou:str = self._備考
         tmpTuple: Tuple = ()
         if self._輸出向先 == 'y':
             tmpTuple = (self._得意先コード, self._納入先コード, 
-                        self._得意先注文ＮＯ)
+                        self._得意先注文ＮＯ, add_no(bikou))
             setPacking.add(tmpTuple)
             return
-        tmpTuple = (self._得意先コード, self._納入先コード)
+        tmpTuple = (self._得意先コード, self._納入先コード, add_no(bikou))
         setPacking.add(tmpTuple)
+        return
 
 
     def add_packingDict_myself(self, packing: Tuple[str,...], 
                 packingDict:Dict[Tuple[str,...], List[UriageForPacking]])-> None:
         '''
-        packing -> ('T1210', 'IDK05', 'IDC4446') や、 ('T3820', ' ')など...
+        packing -> ('T1210', 'IDK05', 'IDC4446', ' ') や、 ('T3820', ' ', '1営業所止め')など...
         '''
 
-        if len(packing) == 3:
+        if len(packing) == 4:
             if (packing[0] == self._得意先コード 
                 and packing[1] == self._納入先コード 
-                and packing[2] == self._得意先注文ＮＯ):
+                and packing[2] == self._得意先注文ＮＯ
+                and (packing[3] == '1' + self._備考 or 
+                     packing[3] == '11' + self._備考 or
+                     packing[3] == self._備考 )):
                 if packing not in packingDict:
                     packingDict[packing] = [self]
                 else:
                     packingDict[packing].append(self)
 
 
-        if len(packing) == 2:
+        if len(packing) == 3:
             if (packing[0] == self._得意先コード 
-                and packing[1] == self._納入先コード):
+                and packing[1] == self._納入先コード
+                and (packing[2] == '1' + self._備考 or
+                     packing[2] == '11' + self._備考 or
+                     packing[2] == self._備考 )):
                 if packing not in packingDict:
                     packingDict[packing] = [self]
                 else:
