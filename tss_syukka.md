@@ -20,7 +20,7 @@ GitHub Publicリポジトリで公開</br>
 | :---:                      | :---:             | :--- |
 | flow                       |                   | def start() プログラムの流れ    |
 | InstanceFactory            |                   | インスタンスを作る |
-| FetchUriageSumiForPacking  | IFetchDataForList | 業務_packing用の売上データをfetch |
+| FetchUriageSumiForPacking  | IFetchDataForList | 業務_packing用の受注データをfetch |
 | FetchUriageSumi            | IFetchDataForList | 出荷実績照会用の売上データをfetch |
 | FetchTyuzan                | IFetchDataForList | 注残確認用のデータをfetch |
 | FetchCalenderUnsouya       | IFetchDataForList | 運送業者の稼働日カレンダーをfetch |
@@ -30,6 +30,8 @@ GitHub Publicリポジトリで公開</br>
 | FetchGrossWeight           | IFetchDataForList | 品番マスタからの仕入製品重量データ(缶込重量)をfetch |
 | FetchUnsoutaiouHonsya      | IFetchDataForList | 本社のリードタイムと輸出向け先のデータをfetch |
 | FetchUnsoutaiouToke        | IFetchDataForList | 土気のリードタイムと輸出向け先のデータをfetch |
+| FetchCalcUntin             | IFetchDataForList | 運賃計算結果データをfetch |
+| FetchTokui                 | IFetchDataForList | 得意先データから締日、isJikaiをfetch |
 | FetchSyukkaListCoa         | IFetchDataForList | 出荷添付リスト.xlsxの成績書シートを取り込む |
 | FetchSyukkaListSiteiDenpyo | IFetchDataForList | 出荷添付リスト.xlsxの指定伝票シートを取り込む |
 | CreateTssBat               |                   | IExcelOutput型のインスタンスに出荷実績照会、</br>業務_packing、成績書を作らせる |
@@ -38,6 +40,7 @@ GitHub Publicリポジトリで公開</br>
 | HsCoa                      | IExcelOutput      | 成績書の必要数分のインスタンスが作られる |
 | MhsCoa                     | IExcelOutput      | 成績書の必要数分のインスタンスが作られる |
 | KoitoCoa                   | IExcelOutput      | 成績書の必要数分のインスタンスが作られる |
+| ExcelCols                  |                   | Enum [TOKUICD=4,NONYUCD=5,TYUBAN=8,BIKOU=9] |
 | PackingForDenpyo           |                   | 伝票の数だけインスタンスが作られる。</br>国内：得意先コード、納入先コード。</br>輸出：得意先コード、納入先コード、注文番号。自分の持っているuriageForPackingsの重量を合計して</br>uriageForPackingsのsumWeight変数に値をセット</br>することもしている。|
 | UriageForSyukkajisseki     |                   | 出荷実績照会作成用、成績書作成用の売上のインスタンス。売上製品のロット数分のインスタンスが作られる。 
 | UriageForPacking           |                   | 業務_packing作成用の売上のインスタンス。売上製品の数分のインスタンスが作られる。(ロットが分かれても数は増えない) IAddToYoteiSouko型のインスタンスを持ち、出荷予定倉庫リストに必要な要素を書き込んでもらう。
@@ -46,6 +49,8 @@ GitHub Publicリポジトリで公開</br>
 | AddForEigyosyo             | IAddToYoteiSouko  | 出荷予定倉庫に"営業所"を書き込む |
 | AddForDohai                | IAddToYoteiSouko  | 出荷予定倉庫に"土配"を書き込む |
 | AddForWeekdayDiff          | IAddToYoteiSouko  | 出荷予定倉庫に"曜日"を書き込む |
+| CheckHatumono              |                   | 成績書の初物をチェックする |
+| ShowToExcel                |                   | TSSexeで作成した業務packingを開いて、売価を追記する|
 | CreateJson                 |                   | List[Dict[str,Any]]からJson文字列を作る道具 |
 | CreateDictFromList         |                   | さまざまなListからDictを作る道具 |
 | GetIdx                     |                   | カラムのリストとカラム名からインデックスNoを得る</br>道具。StaticMethod |
@@ -215,17 +220,30 @@ class AllPackings{
     - _recorder: Recorder
     - _packing_json_str:str
     + create_tssBat(str,str,str="")result
+    + show_uriKin_for_excel(ws, myborder):None
     - _get_factoryName(str)str
     - _create_packing_dict(List[Dict[str,Any]])None
     - _create_packing_json_str()str
 }
 class PackingForDenpyo{
-    - _tokuiCD_tpl:Tuple[str,...]
+    - _isExport:bool
+    - _tokuiCD:str
+    - _nonyuCD:str
+    - _tyuban:str
+    - _bikou:str
     - _uriageForPackings:List~UriageForPacking~
     - _createJson:CreateJson
+    - _uriKin:Decimal
     - _create_packing_dict(List[Dict[str,Any]])None
     - _calc_sumWeight()Decimal
     - _set_sumWeight_to_uriageForPacking()None
+    - _calc_sumUriKin():Decimal
+    + show_uriKin_to_excel(ws, myborder):None
+}
+class ShowToExcel{
+    - _book_name:str
+    - _allPackings:IExcelOutputからAllPackingsにcast
+    + show_to_excel()
 }
 class HsCoa{
     - _uriage:UriageForSyukkajisseki
@@ -305,16 +323,7 @@ class AddForWeekdayDiff{
 
 Main --> flow
 flow --> InstanceFactory: "生成を依頼"
-
-%%InstanceFactory --> UriageForPacking
-%%InstanceFactory --> UriageForSyukkaJisseki
-%%InstanceFactory --> SyukkaJissekiSyoukai
-%%InstanceFactory --> AllPackings
-%%InstanceFactory --> IExcelOutput: "戻り値の型"
 InstanceFactory --> CreateTssBat
-%%InstanceFactory --> HsCoa
-%%InstanceFactory --> MhsCoa
-
 CreateTssBat o-- IExcelOutput
 IExcelOutput <|.. HsCoa
 IExcelOutput <|.. MhsCoa
@@ -338,6 +347,73 @@ IAddToYoteiSouko <|.. AddForDohai
 IAddToYoteiSouko <|.. AddForWeekdayDiff
 UriageForPacking o-- IAddToYoteiSouko
 ```
+```mermaid
+---
+title: 売価の追記
+---
+classDiagram
+direction TB 
+
+class flow{
+    + start()
+}
+class AllPackings{
+    - _uriages:List~UriageForPacking~
+    - _packingForDenpyos:List~PackingForDenpyo~
+    - _createJson:CreateJson
+    - _factoryName
+    - _createDictFromList:CreateDictFromDict
+    - _recorder: Recorder
+    - _packing_json_str:str
+    + create_tssBat(str,str,str="")result
+    + show_uriKin_for_excel(ws, myborder):None
+    - _get_factoryName(str)str
+    - _create_packing_dict(List[Dict[str,Any]])None
+    - _create_packing_json_str()str
+}
+class PackingForDenpyo{
+    - _isExport:bool
+    - _tokuiCD:str
+    - _nonyuCD:str
+    - _tyuban:str
+    - _bikou:str
+    - _uriageForPackings:List~UriageForPacking~
+    - _createJson:CreateJson
+    - _uriKin:Decimal
+    - _create_packing_dict(List[Dict[str,Any]])None
+    - _calc_sumWeight()Decimal
+    - _set_sumWeight_to_uriageForPacking()None
+    - _calc_sumUriKin():Decimal
+    + show_uriKin_to_excel(ws, myborder):None
+}
+class ShowToExcel{
+    - _book_name:str
+    - _allPackings:IExcelOutputからAllPackingsにcast
+    + show_to_excel()
+}
+class UriageForPacking{
+    - _factory:str
+    - _依頼先:str
+    - _得意先コード etc...
+    - _yusyutu_dict: Dict
+    + create_setPacking(set[Tuple])None
+    + add_packingDict_myself(Tuple[str,...], Dict[Tuple[str,...], List[UriageForPacking]])
+    + add_packing_myself(List[Dict[str,Any]])None
+    + plus_myWeight(Decimal)Decimal
+    + set_sumWeight(Decimal)None #setter
+    - _get_factory_name()str
+    - _calc_cans()int
+    - _calc_hinban()str
+    - _calc_weight()Decimal
+    - _calc_yusyutu_mukesaki()str
+    - _add_to_yoteiSouko
+}
+flow --> ShowToExcel
+AllPackings "1" o--> ">1" PackingForDenpyo
+AllPackings "1"  o-- ">1" UriageForPacking
+PackingForDenpyo "1" o-- ">1" UriageForPacking
+ShowToExcel "1" o-- "1" AllPackings
+```
 1. main->flow.start()
 1. 出荷日を訊かれるので"YYYYMMDD"で入力
 1. `\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理\U2002_AUR020B.exe"`をWindowsPowerShellで実行する。
@@ -350,6 +426,8 @@ UriageForPacking o-- IAddToYoteiSouko
 1. UriageForPacking内で出荷予定倉庫の要素を求める
 1. AllPackingsのインスタンス生成。その時UriageForPackingのインスタンスを渡す。
 1. AllPackingsの中で、PackingForDenpyoのインスタンスを生成し、そのリストを保持する。
+1. PackingForDenpyoのコンストラクタで、伝票ごとに総重量を求めてuriageForPackingsにsetする。
+1. PackingForDenpyoのコンストラクタで、伝票ごとに売価を求める。
 1. 空のdic_uriages_for_coaをSyukkaJissekiSyoukaiに渡して、UriageForSyukkaJissekiを詰めてもらう。出来上がりは、`{'koito':[UriageForSyukkaJisseki,...], 'metal':[], 'nonMetal':[UriageForSyukkajisseki, UriageForSyukkaJisseki..]}`
 1. dic_uriages_for_coaから、HsCoa,MhsCoa,KoitoCoaのインスタンスを生成し、それぞれhsCoas,mhsCoas,koitoCoasリストに入れる。インスタンス生成時はUriageForSyukkaJissekiとCheckHatumonoをコンストラクタに渡す。
 1. excel_outputs_args: List[Dict[str,Any]]を作る。
@@ -360,7 +438,16 @@ UriageForPacking o-- IAddToYoteiSouko
  {'output_name':'メタル品管シートCoa', 'excel_output':MhsCoa, 'exe_path':mhsCoaPath, 'output_path':mydir, 'barcodeFolder':mydir},
  {'output_name':'小糸Coa', 'excel_output':KoitoCoa, 'exe_path':koitoCoaPath, 'output_path':mydir, 'barcodeFolder':mydir}]`
 1. CreateTssBatのインスタンス生成、コンストラクタにexcel_outputs_argsを渡す。create_tssBatメソッドを呼び出して、出荷実績照会、業務packing、成績書を作って、所定のフォルダに入れる。
-
+1. ShowToExcelのインスタンスを生成しallPackingsを渡す。
+1. ShowToExcelの中で、allPackings.show_uriKin_for_excel()を呼ぶと、PackingForDenpyoのshow_uriKin_to_excel()が呼ばれて、渡されたワークシートに自分の行位置を探して売価を記入する。
+---
+### 注意点
+- 受注入力の際、出荷元工場を入力しないと売上処理されない。（デフォルトでは@0002になっている）
+- 受注入力の最後の摘要に「営業所止め」「営業所どめ」「支店止め」「支店どめ」を入力すると伝票が分けられる。ただし、一字一句同じにしないと伝票が分かれてしまう。
+- 受注入力の最後の摘要に「営業持参」を入力すると配達になる。
+- 「～様あて」などの文字を混在させても問題ないが、一字一句同じにしないと伝票が分かれてしまう。
+- 「営業持参」と「営業所止め」が混在する場合は「営業持参」が優先される。
+---
 ### アウトプット連絡表
 |  関連                     | ファイル名 | 旧データ         | 新データ | テーブル |
 | :---:                     | :---       | :---             | :---     | :---     |
