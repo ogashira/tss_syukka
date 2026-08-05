@@ -140,16 +140,16 @@ class UriageForPacking:
     def create_setPacking(self, setPacking: Set[Tuple]) -> None:
         '''
         備考に'営業所止め', '支店止め', '営業所どめ', '支店どめ'
-        があったら、先頭に'1'を付ける。
-        営業持参があったら、先頭に'11'を付ける。
+        があったら、先頭に'__'を付ける。
+        営業持参があったら、先頭に'_#'を付ける。
         後で、ソートした時に、うまくまとまるようにする。
         '''
         def add_no(bikou:str)-> str:
+            if '営業持参' in  bikou:
+                return  '_#' + bikou
             if ('営業所止め' in bikou or '支店止め' in bikou or  
                 '営業所どめ' in bikou or  '支店どめ' in bikou):
-                return '1' + bikou
-            if '営業持参' in  bikou:
-                return  '11' + bikou
+                return '__' + bikou
             return bikou
 
 
@@ -162,22 +162,36 @@ class UriageForPacking:
             return
         tmpTuple = (self._得意先コード, self._納入先コード, add_no(bikou))
         setPacking.add(tmpTuple)
+
         return
 
 
     def add_packingDict_myself(self, packing: Tuple[str,...], 
                 packingDict:Dict[Tuple[str,...], List[UriageForPacking]])-> None:
         '''
-        packing -> ('T1210', 'IDK05', 'IDC4446', ' ') や、 ('T3820', ' ', '1営業所止め')など...
+        営業所止め、営業持参の'__', '_#'　は、削除済
+        packing -> ('T1210', 'IDK05', 'IDC4446', ' ') や、 ('T3820', ' ', '営業所止め')など...
         '''
+
+        def isTome(bikou:str)-> bool:
+            if ('営業所止め' in bikou or '支店止め' in bikou or  
+                '営業所どめ' in bikou or  '支店どめ' in bikou):
+                return True
+            return False
+
+        def isJisan(bikou:str)-> bool:
+            if '営業持参' in  bikou:
+                return True
+            return False
+
+
 
         if len(packing) == 4:
             if (packing[0] == self._得意先コード 
                 and packing[1] == self._納入先コード 
                 and packing[2] == self._得意先注文ＮＯ
-                and (packing[3] == '1' + self._備考 or 
-                     packing[3] == '11' + self._備考 or
-                     packing[3] == self._備考 )):
+                and packing[3] == self._備考):
+                
                 if packing not in packingDict:
                     packingDict[packing] = [self]
                 else:
@@ -187,14 +201,13 @@ class UriageForPacking:
         if len(packing) == 3:
             if (packing[0] == self._得意先コード 
                 and packing[1] == self._納入先コード
-                and (packing[2] == '1' + self._備考 or
-                     packing[2] == '11' + self._備考 or
-                     packing[2] == self._備考 )):
+                and packing[2] == self._備考):
                 if packing not in packingDict:
                     packingDict[packing] = [self]
                 else:
                     packingDict[packing].append(self)
 
+        
 
     def _add_to_yoteiSouko(self)-> List[str]:
         '''

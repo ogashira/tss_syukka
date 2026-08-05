@@ -572,6 +572,7 @@ class FetchCalcUntin(IFetchDataForList):
 
         sqlQuery = ("SELECT RFEEHI_U2002.FeeKojCD AS 'factoryCD',"
                     " RFEEHI_U2002.FeeAddress AS 'address',"
+                    " RFEEHI_U2002.FeeSEQ AS 'seq',"
                     " MA_UNS.AitNam1 AS 'unsouName'"
                     " From dbo.RFEEHI_U2002"
                     " LEFT JOIN(" 
@@ -581,6 +582,7 @@ class FetchCalcUntin(IFetchDataForList):
                     ")MA_UNS ON RFEEHI_U2002.FeeCompanyCD = MA_UNS.AitCD1"
                     " WHERE FeeSKDay = '" + self._syukkabi + "'"
                     " AND FeeKojCD = '"+ self._factory + "'"
+                    " ORDER BY RFEEHI_U2002.FeeSEQ DESC"
                     )
 
         data_list: List[List[Any]] = []

@@ -3,6 +3,7 @@ import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Dict, Any, Set, Tuple
 from decimal import Decimal
+from enum import Enum
 from recorder import Recorder
 
 
@@ -142,17 +143,36 @@ class AllPackings(IExcelOutput):
         for uriage in uriages:
             uriage.create_setPacking(setPacking)
         '''setPacking
-        {('T1210', 'IDK05', 'IDC4446', ''), ('T3820', ' ', '1営業所止め'), ('T2880', 'H172',' '), ('T1039', ' ', ' '), ('T3500', 'H189', ''), ('T0320', ' ', ' '), ('T0060', ' ', '11営業持参'), ('T0020', ' ', ' ')}
+        {('T1210', 'IDK05', 'IDC4446', ''), ('T3820', ' ', '__営業所止め'), ('T2880', 'H172',' '), ('T1039', ' ', ' '), ('T3500', 'H189', ''), ('T0320', ' ', ' '), ('T0060', ' ', '_#営業持参'), ('T0020', ' ', ' ')}
         '''
         listPacking = list(setPacking)
         sortedPacking = sorted(listPacking)
 
+
         
         # packingタプルとUriageForPackingリストの辞書を作る
-        packingDict:Dict[Tuple[str], List[UriageForPacking]] = {}
+        # 同時に'__', '_#'を消す
+        def add_to_tuple(pack: Tuple[str, ...]) -> Tuple[str, ...]:
+            newTuple: Tuple[str, ...] = tuple()
+            s = ''
+            if len(pack) == 4:
+                s = pack[3]
+                if pack[3][:2] == '__' or pack[3][:2] == '_#':
+                    s = pack[3][2:]
+                newTuple = (pack[0], pack[1], pack[2], s)
+            if len(pack) == 3:
+                s = pack[2]
+                if pack[2][:2] == '__' or pack[2][:2] == '_#':
+                    s = pack[2][2:]
+                newTuple = (pack[0], pack[1], s)
+
+            return newTuple
+
+        packingDict: Dict[Tuple[str, ...], List[UriageForPacking]] = {}
         for packing in sortedPacking:
+            newPack: Tuple[str, ...] = add_to_tuple(packing)
             for uriage in uriages:
-                uriage.add_packingDict_myself(packing, packingDict)
+                uriage.add_packingDict_myself(newPack, packingDict)
 
 
         # PackingForDenpyoのインスタンスを作る
@@ -206,6 +226,12 @@ class AllPackings(IExcelOutput):
         self._recorder.out_file(code_txt, '\n')
 
 
+class ExcelCols(Enum):
+    TOKUICD = 4
+    NONYUCD = 5
+    TYUBAN = 8
+    BIKOU = 9
+
 
 class PackingForDenpyo:
 
@@ -213,7 +239,7 @@ class PackingForDenpyo:
                  uriageForPackings: List["UriageForPacking"],
                  createJson:"CreateJson") -> None:
         '''
-        tokuiCD_tpl = ('T1210', 'IDK05', 'IDC4446', ' ')または ('T3820', ' ', '1営業所止め')
+        tokuiCD_tpl = ('T1210', 'IDK05', 'IDC4446', ' ')または ('T3820', ' ', '営業所止め')
         '''
         self._isExport = False 
         if len(tokuiCD_tpl) == 4:
@@ -294,38 +320,28 @@ class PackingForDenpyo:
     def show_uriKin_to_excel(self, ws, myborder)-> None:
         
         def put_uriKin_for_export(i:int)-> None:
-            bikou:str = self._bikou
-            if bikou[:2] == '11':
-                bikou = self._bikou[2:]
-            if bikou[:1] == '1':
-                bikou = self._bikou[1:]
 
-            if ((ws.cell(i, 4).value == self._tokuiCD and
-                 ws.cell(i, 5).value == self._nonyuCD and
-                 ws.cell(i, 8).value == self._tyuban and 
-                 bikou in ws.cell(i, 9).value) and not 
-                (ws.cell(i + 1, 4).value == self._tokuiCD and
-                 ws.cell(i + 1, 5).value == self._nonyuCD and
-                 ws.cell(i + 1, 8).value == self._tyuban and
-                 bikou in ws.cell(i + 1, 9).value)):
+            if ((ws.cell(i, ExcelCols.TOKUICD.value).value == self._tokuiCD and
+                 ws.cell(i, ExcelCols.NONYUCD.value).value == self._nonyuCD and
+                 ws.cell(i, ExcelCols.TYUBAN.value).value == self._tyuban and 
+                 ws.cell(i, ExcelCols.BIKOU.value).value == self._bikou) and not 
+                (ws.cell(i + 1, ExcelCols.TOKUICD.value).value == self._tokuiCD and
+                 ws.cell(i + 1, ExcelCols.NONYUCD.value).value == self._nonyuCD and
+                 ws.cell(i + 1, ExcelCols.TYUBAN.value).value == self._tyuban and
+                 ws.cell(i + 1, ExcelCols.BIKOU.value).value == self._bikou)):
                 # CDが同じで下の行が違っていたら
                 ws.cell(i, lastCol).value = self._uriKin
                 ws.cell(i, lastCol).border = myborder
                 ws.cell(i, lastCol).number_format = "#,##" # カンマ表記
 
         def put_urikin_for_notExport(i:int)-> None:
-            bikou:str = self._bikou
-            if bikou[:2] == '11':
-                bikou = self._bikou[2:]
-            if bikou[:1] == '1':
-                bikou = self._bikou[1:]
 
-            if ((ws.cell(i, 4).value == self._tokuiCD and
-                 ws.cell(i, 5).value == self._nonyuCD and 
-                 bikou in ws.cell(i, 9).value) and not
-                (ws.cell(i + 1, 4).value == self._tokuiCD and
-                 ws.cell(i + 1, 5).value == self._nonyuCD and
-                 bikou in ws.cell(i + 1, 9).value)): 
+            if ((ws.cell(i, ExcelCols.TOKUICD.value).value == self._tokuiCD and
+                 ws.cell(i, ExcelCols.NONYUCD.value).value == self._nonyuCD and 
+                 ws.cell(i, ExcelCols.BIKOU.value).value == self._bikou) and not
+                (ws.cell(i + 1, ExcelCols.TOKUICD.value).value == self._tokuiCD and
+                 ws.cell(i + 1, ExcelCols.NONYUCD.value).value == self._nonyuCD and
+                 ws.cell(i + 1, ExcelCols.BIKOU.value).value == self._bikou)): 
                 # CDが同じで下の行が違っていたら
                 ws.cell(i, lastCol).value = self._uriKin
                 ws.cell(i, lastCol).border = myborder

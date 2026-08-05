@@ -30,8 +30,3 @@ class ShowToExcel:
         ws.column_dimensions[target_col_letter].width = 12
 
         wb.save(self._book_name)
-
-
-
-
-
