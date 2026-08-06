@@ -107,7 +107,6 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " WHERE RJYUCD.RjcSKDay =" + self._syukka_date +
                     " AND RJYUCD.RjcTokCD < 'T6000'"
                     " AND RJYUCD.RjcTokCD <> 'T0000'"
-                    " AND RJYUCD.RjcTokCD <> 'T0011'"
                     " ORDER BY RJYUCD.RjcTokCD, RJYUCD.RjcNonyuCD, RJYUCD.RjcCMNo"
                     )
 
@@ -401,7 +400,7 @@ class FetchTnju(IFetchDataForList):
         sqlQuery = ("SELECT MHINCD.HinHinCD AS 'hinban',"
                     " MHINCD.HinTju AS 'tnju'"
                     " From dbo.MHINCD"
-                    " WHERE MHINCD.HinTniCD = 'CN'"
+                    " WHERE MHINCD.HinTniCD = 'CN'" 
                     " ORDER BY MHINCD.HinHinCD"
                     )
 
