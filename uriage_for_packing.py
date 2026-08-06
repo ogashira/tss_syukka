@@ -128,12 +128,13 @@ class UriageForPacking:
     def _calc_yusyutu_mukesaki(self)-> str:
         yusyutu_mukesaki = ''
         nonyu_code = self._納入先コード
+
         # effitからfetchした納入先コードが' 'の場合は''にする
         # unsoutaiouデータは''なので。def create_yusyutuDictで''にしてある。
         if nonyu_code ==  ' ':
             nonyu_code = ''
         tmpTuple = (self._得意先コード, nonyu_code)
-        yusyutu_mukesaki = self._yusyutu_dict[tmpTuple]
+        yusyutu_mukesaki = self._yusyutu_dict.get(tmpTuple, '')
 
         return yusyutu_mukesaki
 

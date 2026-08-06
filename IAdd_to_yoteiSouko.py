@@ -107,7 +107,7 @@ class AddForWeekdayDiff(IAddToYoteiSouko):
         
         if nonyuCD == ' ':
             nonyuCD = ''
-        leadTime: int = leadTime_dict[(tokuiCD, nonyuCD)]
+        leadTime: int = leadTime_dict.get((tokuiCD, nonyuCD), 1)
 
         nouki_idx = self._list_YMD.index(nouki)
 
