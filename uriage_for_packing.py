@@ -222,6 +222,7 @@ class UriageForPacking:
         '''
         yoteiSoukos: List[str] = []
 
+
         self._addToYoteiSoukos['weekdayDiff'].add_to_yoteiSouko(
                             yoteiSoukos, self._出荷日, self._納期,
                             self._得意先コード, self._納入先コード,

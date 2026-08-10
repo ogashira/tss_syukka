@@ -52,6 +52,8 @@ class AddForSiteiDenpyo(IAddToYoteiSouko):
 
         for innerDic in self._tenpSitei_dicts:
             tenp_nonyuCD = innerDic['納入先ｺｰﾄﾞ']
+            if tenp_nonyuCD is None: # 添付リスト.xlsxの空白はNoneになってる
+                tenp_nonyuCD = ''
             if (innerDic['得意先ｺｰﾄﾞ'] == tokuiCD and
                 tenp_nonyuCD == nonyuCD):
                 yoteiSoukos.append('指')
@@ -107,6 +109,7 @@ class AddForWeekdayDiff(IAddToYoteiSouko):
         
         if nonyuCD == ' ':
             nonyuCD = ''
+        # leadTime_dictのnonyuCDは、''に変換済み
         leadTime: int = leadTime_dict.get((tokuiCD, nonyuCD), 1)
 
         nouki_idx = self._list_YMD.index(nouki)
