@@ -178,6 +178,9 @@ def start()-> None:
 
     #yusyutu_toke_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
     #leadTime_toke_dict = {('T0060', 'H172'): 1, ('T0060', ''): 2,.....}
+    '''
+    yusyutu_dictとleadTime_dictのnonyCDは、''に変換しておく
+    '''
     createDictFromList = InstanceFactory.get_createDictFromList()
     try:
         yusyutu_toke_dict: Dict[Tuple,str] = \
