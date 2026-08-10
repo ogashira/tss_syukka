@@ -62,7 +62,7 @@ class InstanceFactory:
     def get_sql_server_effit(cls) -> None:
         if cls._sqlServerEffit is None:
             cls._setup_sql_path()
-            from sql_server_test import SqlServer as SqlServerEffit
+            from sql_server import SqlServer as SqlServerEffit
             cls._sqlServerEffit = SqlServerEffit()
             cls._cnxn_effit = cls._sqlServerEffit.get_cnxn()
 

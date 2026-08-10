@@ -46,6 +46,7 @@ class SyukkaJissekiSyoukai(IExcelOutput):
         self._syukkaKoujou = self._get_syukkaKoujou(factory_name)
 
 
+
     def _get_factoryName(self, factory_name)-> str:
         if factory_name == '@0001':
             return '本社'
@@ -107,6 +108,7 @@ class SyukkaJissekiSyoukai(IExcelOutput):
         result = subprocess.run([exe_path] + args, capture_output=True, text=True)
         returncode: int = result.returncode
 
+
         code_txt = f'{output_name}のreturncode = {returncode}'
         self._recorder.out_log(code_txt, '\n')
         self._recorder.out_file(code_txt, '\n')
@@ -122,7 +124,6 @@ class SyukkaJissekiSyoukai(IExcelOutput):
         '''
         for uriage in self._uriages:
             uriage.add_myself_for_coa(dic_uriages_for_coa)
-
 
 
 class AllPackings(IExcelOutput):

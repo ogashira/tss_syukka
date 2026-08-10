@@ -69,7 +69,7 @@ class UriageForPacking:
             self._unsouName == '' or self._unsouName == ' '):
             return self._unsouName
 
-        # TODO
+        # TODO 依頼先が無い場合'hoge'
         unsouName:str = self._unsouNames.get(self._address, 'hoge')
 
         return  unsouName

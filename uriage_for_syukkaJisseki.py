@@ -74,10 +74,12 @@ class UriageForSyukkaJisseki:
 
 
     def _calc_cans(self)-> int:
+        cans: int = 0
         if self._受注単位 == 'CN':
             return int(self._受注数量)
         if self._振替元数量 is not None: 
             return int(self._振替元数量)
+        return cans
 
     def _calc_yusyutu_mukesaki(self)-> str:
         yusyutu_mukesaki = ''

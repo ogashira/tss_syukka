@@ -38,9 +38,9 @@ def create_excel_outputs_args(excel_outputs_args:List[Dict[str,Any]],
 
 def make_dire(syukka_date: str)-> str:
     # 1. ベースとなるディレクトリと今日の年月日を設定
-    base_dir = Path(r"\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\01出荷output_TSS_実装中")
+    base_dir = Path(r"\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\01出荷output_TSS")
     if platform.system() == 'Linux':
-        base_dir = Path(r"/mnt/public/営業課ﾌｫﾙﾀﾞ/01出荷output_TSS_実装中")
+        base_dir = Path(r"/mnt/public/営業課ﾌｫﾙﾀﾞ/01出荷output_TSS")
 
 
     # 2. 最初のリクエストフォルダ名を作成
@@ -118,11 +118,11 @@ def start()-> None:
 
     '''自動売上処理の実行 '''
     staffCD = "000240" # 担当者コード
-    target_dir = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理"
-    exePath = r"\\192.168.1.245\effit_A\BIN_TEST_自動出荷処理\U2002_AUR020B.exe"
+    target_dir = r"\\192.168.1.245\effit_A\BIN"
+    exePath = r"\\192.168.1.245\effit_A\BIN\U2002_AUR020B.exe"
     # TODO "toyo_test"を"toyo"に変更する
     command_line = \
-      f'{exePath} \'"toyo_test","1","{staffCD}","{syukka_date}","","","","92"\''
+      f'{exePath} \'"toyo_2019","1","{staffCD}","{syukka_date}","","","","92"\''
     powershell_path = os.path.join(os.environ['SystemRoot'], 'System32', 
                                   'WindowsPowerShell', 'v1.0', 'powershell.exe')
 
@@ -160,6 +160,7 @@ def start()-> None:
     sumi = InstanceFactory.get_fetchUriageSumi(syukka_date)
     sumi_data = []
     sumi_col, sumi_data = data_fetch(sumi, recorder)
+
 
     if not sumi_data:
         txt = f'{syukka_date}の売上データがありません。処理を中止します'
@@ -262,6 +263,9 @@ def start()-> None:
                  createDictFromList,
                  recorder
                  )
+
+
+    
 
     ''' ここから業務_packing>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     sumi_for_packing = InstanceFactory.get_fetchUriageSumiForPacking(syukka_date)
@@ -499,6 +503,7 @@ def start()-> None:
     create_excel_outputs_args(excel_outputs_args,'業務packing_土気',
                              allPackings_toke, packing_path,
                              output_path, '')
+
 
     if hsCoas:
         for hsCoa in hsCoas:
