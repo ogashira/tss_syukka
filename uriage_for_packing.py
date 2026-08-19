@@ -1,6 +1,8 @@
 from __future__ import annotations 
+
+import unicodedata
+import re
 from decimal import Decimal
-from re import I
 from recorder import Recorder
 from IAdd_to_yoteiSouko import IAddToYoteiSouko
 '''
@@ -81,8 +83,6 @@ class UriageForPacking:
         return '土気出荷'
 
     def _calc_hinban(self)-> str:
-        if self._受注単位 != 'CN':
-            return self._振替元品番
         if self._振替元品番 is not None: # Noneではなく、２文字以上の文字があったら
             if len(self._振替元品番) > 2:
                 return self._振替元品番
@@ -90,7 +90,7 @@ class UriageForPacking:
 
     def _calc_cans(self)-> int:
         cans: int = 0
-        if self._受注単位 == 'CN':
+        if self._受注単位 == 'CN' or self._受注単位 == 'BI':
             return int(self._受注数量)
         if self._受注単位 == 'KG':
             if self._tnju_dic.get(self._hinban, 0) == 0:
@@ -101,11 +101,64 @@ class UriageForPacking:
         return cans
 
     def _calc_weight(self)-> Decimal:
+
+        def calc_weight_from_hinName()-> Decimal:
+            # 品名を半角に変換
+            half_width_hinName: str = unicodedata.normalize('NFKC', self._品名)
+            #最後の ( の位置
+            last_bracket_stt: int = half_width_hinName.rfind('(')
+            #最後の ( の中の文字列
+            last_bracket_end: int = half_width_hinName.rfind(')')
+            #最後の( )の中の文字列
+            last_bracket_str: str = half_width_hinName[last_bracket_stt:last_bracket_end+1]
+            #最後の( )の中の文字列をに大文字変換
+            last_bracket_str_upper: str = last_bracket_str.upper()
+
+            # 小数（数字・ドット・数字）または 整数（数字の連続）にマッチする正規表現
+            match_kg = tuple()
+            match_g = tuple()
+            match_kg = re.search(r"(\d+\.\d+|\d+)(KG)", last_bracket_str_upper)
+            match_g = re.search(r"(\d+\.\d+|\d+)(G)", last_bracket_str_upper)
+
+            net = Decimal('0')
+            if match_kg:
+                # マッチした文字列をDecimal型に変換
+                net = Decimal(match_kg.group(1))
+            elif match_g:
+                # マッチした文字列をDecimal型に変換
+                net = Decimal(match_g.group(2)) / Decimal('1000')
+
+            # can_weightaを加算
+            if net == Decimal('0'):
+                return Decimal('0')
+            if net <= Decimal('1.0'):
+                return net + Decimal('0.2')
+            if net <= Decimal('2.0'):
+                return net + Decimal('0.3')
+            if net <= Decimal('5.0'):
+                return net + Decimal('0.5')
+            if net <= Decimal('17.0'):
+                return net + Decimal('1.0')
+            if net > Decimal('17.0'):
+                return net + Decimal('2.0')
+
+            return net
+
         weight: Decimal = Decimal('0')
         # grossWeight_dicに重量が記載されていたらそれが缶込の重量
         if self._hinban in self._grossWeight_dic:
             weight_str = self._grossWeight_dic[self._hinban]
             return Decimal(weight_str)
+
+
+        # 999998は、品名から重量(net + can_weight)を求める。
+        if self._hinban == '999998': 
+            weight = calc_weight_from_hinName()
+            if weight == Decimal('0'):
+                txt = f'{self._品名} に重量がありません'
+                self._recorder.out_log(txt)
+                self._recorder.out_file(txt)
+            return weight
         
         can_name = self._productCan_dic.get(self._hinban, '')
         can_weight = self._tnju_dic.get(can_name, Decimal('0')) 
@@ -270,5 +323,7 @@ class UriageForPacking:
         self._sumWeight = sumWeight
 
     def plus_myUriKin(self, sumUriKin)-> Decimal:
+        if self._hinban == 'UNSOUHI':
+            return sumUriKin
         sumUriKin += self._売り金額
         return sumUriKin
