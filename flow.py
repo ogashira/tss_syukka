@@ -406,7 +406,7 @@ def start()-> None:
                     recorder,
                     addToYoteiSoukos,
                     unsouNames_honsya,
-                    unsouNames_toke
+                    unsouNames_toke,
                     )
 
     uriageForPackings_honsya: List["UriageForPacking"] = uriagePackings[0]

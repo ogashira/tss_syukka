@@ -1,13 +1,9 @@
-import sys
-import csv
 import platform
-from  datetime import date, timedelta
-from re import I
+from decimal import Decimal
+import yaml
 import warnings
-import pandas as pd
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Dict
 from abc import ABC, abstractmethod
-from get_idx import GetIdx
 import openpyxl
 
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -699,3 +695,28 @@ class FetchSyukkaListSiteiDenpyo(IFetchDataForList):
         data_list = data[1:]
             
         return columns, data_list
+
+
+class SampleCanWeight:
+
+    def __init__(self) -> None:
+        pass
+
+    def fetch_data(self) -> Dict[Decimal, Decimal]:
+        path = r'\\192.168.1.247\共有\営業課ﾌｫﾙﾀﾞ\01出荷output_TSS\sample_can_weight.yml'
+        if platform.system() == 'Linux':
+            path = r'/mnt/public/営業課ﾌｫﾙﾀﾞ/01出荷output_TSS/sample_can_weight.yml'
+
+        sample_can_weights: Dict[Decimal, Decimal] = {}
+
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+
+            sample_can_weights: Dict[Decimal, Decimal] = data['sample_can_weights']
+            return sample_can_weights
+
+        except FileNotFoundError:
+            raise 
+        except yaml.YAMLError:
+            raise

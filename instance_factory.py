@@ -304,6 +304,29 @@ class InstanceFactory:
         #yusyutu_dict = {('T0060', 'H172'): 'y', ('T0060', ''): '',.....}
         # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
         from uriage_for_packing import UriageForPacking
+        from fetch_data_for_list import SampleCanWeight
+        from decimal import Decimal
+        import yaml
+        '''
+        sample_can_weights: dict[Decimal, Decimal] を取得する。これは 999998の場合の
+        容器の重量として使う。
+        '''
+        def fetch_sampleCanWeights() -> Dict[Decimal, Decimal]:
+            sample_can_weights: Dict[Decimal, Decimal] = {}
+            sampleCanWeight: SampleCanWeight = SampleCanWeight()
+            try:
+                sample_can_weights = sampleCanWeight.fetch_data()
+            except FileNotFoundError as e:
+                recorder.out_log(f'yamlファイル取得エラー:{e}', '\n')
+                recorder.out_file(f'yamlファイル取得エラー:{e}', '\n')
+            except yaml.YAMLError as e:
+                recorder.out_log(f'yamlファイル取得エラー:{e}', '\n')
+                recorder.out_file(f'yamlファイル取得エラー:{e}', '\n')
+
+            return sample_can_weights
+
+        sample_can_weights = fetch_sampleCanWeights()
+
         ins_name: str = 'uriagePackingsHonsyaToke'
         uriageForPackings_toke: List[UriageForPacking] = []
         uriageForPackings_honsya: List[UriageForPacking] = []
@@ -319,7 +342,8 @@ class InstanceFactory:
                                          grossWeight_dic,
                                          recorder,
                                          addToYoteiSoukos,
-                                         unsouNames_honsya)
+                                         unsouNames_honsya,
+                                         sample_can_weights)
                     uriageForPackings_honsya.append(uriageForPacking_instance)
                 else:
                     uriageForPacking_instance: UriageForPacking = \
@@ -331,7 +355,8 @@ class InstanceFactory:
                                          grossWeight_dic,
                                          recorder,
                                          addToYoteiSoukos,
-                                         unsouNames_toke)
+                                         unsouNames_toke,
+                                         sample_can_weights)
                     uriageForPackings_toke.append(uriageForPacking_instance)
 
             cls._instances[ins_name] = (uriageForPackings_honsya, 
