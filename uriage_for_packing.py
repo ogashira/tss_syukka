@@ -20,7 +20,8 @@ class UriageForPacking:
                  grossWeight_dic: Dict[str, Any], 
                  recorder:Recorder,
                  addToYoteiSoukos: Dict[str, IAddToYoteiSouko],
-                 unsouNames: Dict[str, str])-> None:
+                 unsouNames: Dict[str, str],
+                 sample_can_weights: dict[Decimal, Decimal])-> None:
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
@@ -46,6 +47,7 @@ class UriageForPacking:
         self._納期: str = dict_data['納期']
         self._受注数量: Decimal = dict_data['uriKosu']
         self._受注単位: str = dict_data['受注単位']
+        self._sample_can_weights = sample_can_weights
 
         add: int = 0
         if not (dict_data['add'] == ' ' or dict_data['add'] == ''):
@@ -102,7 +104,15 @@ class UriageForPacking:
 
     def _calc_weight(self)-> Decimal:
 
-        def calc_weight_from_hinName()-> Decimal:
+        def calc_net()-> Decimal:
+            net = Decimal('0')
+
+            # 999998以外
+            if self._hinban != '999998':
+                net = self._tnju_dic.get(self._hinban, Decimal('0'))
+                return net / Decimal('1000')
+
+            # 999998は、品名から重量(net)を求める。
             # 品名を半角に変換
             half_width_hinName: str = unicodedata.normalize('NFKC', self._品名)
             #最後の ( の位置
@@ -120,7 +130,6 @@ class UriageForPacking:
             match_kg = re.search(r"(\d+\.\d+|\d+)(KG)", last_bracket_str_upper)
             match_g = re.search(r"(\d+\.\d+|\d+)(G)", last_bracket_str_upper)
 
-            net = Decimal('0')
             if match_kg:
                 # マッチした文字列をDecimal型に変換
                 net = Decimal(match_kg.group(1))
@@ -128,41 +137,41 @@ class UriageForPacking:
                 # マッチした文字列をDecimal型に変換
                 net = Decimal(match_g.group(2)) / Decimal('1000')
 
-            # can_weightaを加算
             if net == Decimal('0'):
-                return Decimal('0')
-            if net <= Decimal('1.0'):
-                return net + Decimal('0.2')
-            if net <= Decimal('2.0'):
-                return net + Decimal('0.3')
-            if net <= Decimal('5.0'):
-                return net + Decimal('0.5')
-            if net <= Decimal('17.0'):
-                return net + Decimal('1.0')
-            if net > Decimal('17.0'):
-                return net + Decimal('2.0')
+                txt = f'{self._品名} に重量がありません'
+                self._recorder.out_log(txt)
+                self._recorder.out_file(txt)
 
             return net
 
+        def calc_can_weight(net: Decimal)-> Decimal:
+            can_weight = Decimal('0')
+
+            # 999998以外
+            if self._hinban != '999998':
+                can_name = self._productCan_dic.get(self._hinban, '')
+                can_weight = self._tnju_dic.get(can_name, Decimal('0')) 
+                return can_weight / Decimal('1000')
+
+            # 999998は、sample_can_weight(yaml)から重量(can_weight)を求める。
+            for k_net, v_canWeight in self._sample_can_weights.items():
+                if net <= k_net:
+                    can_weight = Decimal(v_canWeight)
+                    break
+            return can_weight
+
+
         weight: Decimal = Decimal('0')
+        can_weight: Decimal = Decimal('0')
+        net: Decimal = Decimal('0')
+
         # grossWeight_dicに重量が記載されていたらそれが缶込の重量
         if self._hinban in self._grossWeight_dic:
             weight_str = self._grossWeight_dic[self._hinban]
             return Decimal(weight_str)
 
-
-        # 999998は、品名から重量(net + can_weight)を求める。
-        if self._hinban == '999998': 
-            weight = calc_weight_from_hinName()
-            if weight == Decimal('0'):
-                txt = f'{self._品名} に重量がありません'
-                self._recorder.out_log(txt)
-                self._recorder.out_file(txt)
-            return weight
-        
-        can_name = self._productCan_dic.get(self._hinban, '')
-        can_weight = self._tnju_dic.get(can_name, Decimal('0')) 
-        net = self._tnju_dic.get(self._hinban, Decimal('0'))
+        net = calc_net()
+        can_weight = calc_can_weight(net)
 
         if can_weight == Decimal('0'):
             txt = f'{self._売り品番} の容器の重量が求められません'
@@ -173,8 +182,7 @@ class UriageForPacking:
             self._recorder.out_log(txt)
             self._recorder.out_file(txt)
 
-        weight = (can_weight + net) / 1000
-
+        weight = can_weight + net
 
         return weight
 
