@@ -135,7 +135,7 @@ class UriageForPacking:
                 net = Decimal(match_kg.group(1))
             elif match_g:
                 # マッチした文字列をDecimal型に変換
-                net = Decimal(match_g.group(2)) / Decimal('1000')
+                net = Decimal(match_g.group(1)) / Decimal('1000')
 
             if net == Decimal('0'):
                 txt = f'{self._品名} に重量がありません'
