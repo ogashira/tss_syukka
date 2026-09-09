@@ -31,14 +31,14 @@ class UriageForPacking:
         self._grossWeight_dic = grossWeight_dic
         self._recorder = recorder
         self._addToYoteiSoukos = addToYoteiSoukos
-        self._unsouNames = unsouNames
+        self._unsouNames_for_calced = unsouNames
         self._factory: str = dict_data['factory_name']
         self._得意先コード: str = dict_data['得意先コード']
         self._納入先コード: str = dict_data['納入先コード']
         self._納入先名称１: str = dict_data['納入先名称１']
         self._address: str = dict_data['納入先住所１']
-        self._unsouName: str = dict_data['依頼先'] #売上済から得た運送屋
-        self._依頼先: str = self._get_unsouName() # 売上不可の場合は運賃計算結果から
+        self._iraisaki: str = dict_data['依頼先'] #売上済から得た運送屋
+        self._unsouName: str = self._get_unsouName() # 売上不可の場合は運賃計算結果から
         self._売り品番: str = dict_data['売り品番']
         self._品名: str = dict_data['品名']
         self._得意先注文ＮＯ: str = dict_data['得意先注文ＮＯ']
@@ -67,16 +67,47 @@ class UriageForPacking:
         self._sumWeight:Decimal = Decimal('0')
         self._出荷予定倉庫 = self._add_to_yoteiSouko()
 
+        # 最初に運賃計算した運送屋と、売上処理した運送屋が同じかどうかを判定する
+        self._check_diff_unsouName()
+
 
     def _get_unsouName(self)-> str:
-        if not (self._unsouName is None or 
-            self._unsouName == '' or self._unsouName == ' '):
-            return self._unsouName
+        if not (self._iraisaki is None or 
+            self._iraisaki == '' or self._iraisaki == ' '):
+            return self._iraisaki # 売上処理した運送屋
 
-        # TODO 依頼先が無い場合'hoge'
-        unsouName:str = self._unsouNames.get(self._address, 'hoge')
-
+        # TODO 運賃計算した運送屋が無い場合'hoge'
+        # self._unsouNames_for_calced = {'愛知県.....': 'ケイヒン', '静岡県...':'新潟'...}
+        unsouName:str = self._unsouNames_for_calced.get(self._address, 'hoge')
+        
         return  unsouName
+
+
+    def _check_diff_unsouName(self) -> None:
+        '''
+        最初に運賃計算した運送屋と、売上処理した運送屋が同じかどうかを判定する
+        '''
+        first_calced_unsouName: str = ''
+        uriaged_unsouName: str = ''
+        if not (self._iraisaki is None or 
+            self._iraisaki == '' or self._iraisaki == ' '):
+            uriaged_unsouName = self._iraisaki
+
+        first_calced_unsouName:str = \
+                        self._unsouNames_for_calced.get(self._address, '')
+
+        if  uriaged_unsouName == '':
+            return
+
+        if first_calced_unsouName == '':
+            return
+
+        if first_calced_unsouName != uriaged_unsouName:
+            txt = '!' * 60 + '\n'
+            txt += f'{self._得意先コード}_{self._納入先コード}_{self._納入先名称１}_{self._品名}の\n最初運賃計算した運送屋: {first_calced_unsouName} と、売上処理した運送屋: {uriaged_unsouName} が違います。\n手動で売上再処理を行ってください!!!\n'
+            txt += '!' * 60 + '\n'
+            self._recorder.out_log(txt, '\n')
+            self._recorder.out_file(txt, '\n')
 
 
     def _get_factory_name(self)-> str:
@@ -306,7 +337,7 @@ class UriageForPacking:
 
     def add_packing_myself(self, dic_list: List[Dict[str, Any]])->None:
         tmp_dict = {
-                '依頼先':         self._依頼先,
+                '依頼先':         self._unsouName,
                 'cans':           self._cans,
                 '総重量':         self._sumWeight,
                 '得意先コード':   self._得意先コード,
