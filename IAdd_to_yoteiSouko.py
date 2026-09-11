@@ -110,7 +110,10 @@ class AddForWeekdayDiff(IAddToYoteiSouko):
         if nonyuCD == ' ':
             nonyuCD = ''
         # leadTime_dictのnonyuCDは、''に変換済み
-        leadTime: int = leadTime_dict.get((tokuiCD, nonyuCD), 1)
+        try:
+            leadTime: int = leadTime_dict.get((tokuiCD, nonyuCD), 1)
+        except KeyError as e:
+            raise KeyError
 
         nouki_idx = self._list_YMD.index(nouki)
 

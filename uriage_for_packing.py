@@ -1,5 +1,7 @@
 from __future__ import annotations 
 
+import sys
+
 import unicodedata
 import re
 from decimal import Decimal
@@ -310,15 +312,22 @@ class UriageForPacking:
         addToYoteiSoukos['eigyosyo'] = addForEigyosyo
         addToYoteiSoukos['dohai'] = addForDohai
         addToYoteiSoukos['weekdayDiff'] = addForWeekdayDiff
-        addToYoteiSoukos['jikai'] = addForWeekdayDiff
+        addToYoteiSoukos['jikai'] = addForJikai
         '''
         yoteiSoukos: List[str] = []
 
 
-        self._addToYoteiSoukos['weekdayDiff'].add_to_yoteiSouko(
-                            yoteiSoukos, self._出荷日, self._納期,
-                            self._得意先コード, self._納入先コード,
-                            self._leadTime_dict)
+        try:
+            self._addToYoteiSoukos['weekdayDiff'].add_to_yoteiSouko(
+                                yoteiSoukos, self._出荷日, self._納期,
+                                self._得意先コード, self._納入先コード,
+                                self._leadTime_dict)
+        except KeyError as e:
+            txt = f'運送屋の情報がありません。処理を中止します：{e}'
+            self._recorder.out_log(txt, '\n')
+            self._recorder.out_file(txt, '\n')
+            sys.exit(1)
+
         self._addToYoteiSoukos['dohai'].add_to_yoteiSouko(
                             yoteiSoukos, self._納期)
         self._addToYoteiSoukos['eigyosyo'].add_to_yoteiSouko(

@@ -1,6 +1,5 @@
 from __future__ import annotations 
-import glob
-import shutil
+import sys
 import subprocess
 from decimal import Decimal
 from typing import Dict, Any, Tuple, Set, List, Optional
@@ -89,7 +88,13 @@ class UriageForSyukkaJisseki:
         if nonyu_code ==  ' ':
             nonyu_code = ''
         tmpTuple = (self._得意先コード, nonyu_code)
-        yusyutu_mukesaki = self._yusyutu_dict[tmpTuple]
+        try:
+            yusyutu_mukesaki = self._yusyutu_dict[tmpTuple]
+        except KeyError as e:
+            txt = f'輸出向け先の情報がありません。処理を中止します：{e}'
+            self._recorder.out_log(txt, '\n')
+            self._recorder.out_file(txt, '\n')
+            sys.exit(1)
 
         return yusyutu_mukesaki
 
