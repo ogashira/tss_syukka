@@ -12,6 +12,7 @@ from instance_factory import InstanceFactory
 from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
 from create_tss_bat import CreateTssBat
 from show_to_excel import ShowToExcel
+from get_idx import GetIdx
 
 # 実行時にはインポートせず、型チェックの為だけに書く
 if TYPE_CHECKING:
@@ -350,6 +351,19 @@ def start()-> None:
                                                          'address',
                                                          'unsouName')
 
+    '''
+    20261001 kg売りから元品番に変換した後、張替え品番だったら、貼替え元品番
+    に変換するのを忘れていたため、修正する
+    '''
+    fetchLabelHarikaeHinban = InstanceFactory.get_fetchLabelHarikaeHinban()
+    harikae_col, harikae_data = data_fetch(fetchLabelHarikaeHinban, recorder)
+    hinban_idx = GetIdx.get_idx(harikae_col, 'hinban')
+    harikaeMotoHinban_idx = GetIdx.get_idx(harikae_col, 'harikaeMotoHinban')
+    harikaeMotoHinbans: Dict[str, str] = {}
+    for row in harikae_data:
+        harikaeMotoHinbans[row[hinban_idx]] = row[harikaeMotoHinban_idx]
+    ''' 20261001 ここまでdebug'''
+
     ''' cnxnの消去>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     InstanceFactory.delete_cnxn
     '''>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
@@ -407,6 +421,7 @@ def start()-> None:
                     addToYoteiSoukos,
                     unsouNames_honsya,
                     unsouNames_toke,
+                    harikaeMotoHinbans
                     )
 
     uriageForPackings_honsya: List["UriageForPacking"] = uriagePackings[0]

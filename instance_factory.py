@@ -217,6 +217,15 @@ class InstanceFactory:
 
 
     @classmethod
+    def get_fetchLabelHarikaeHinban(cls) -> IFetchDataForList:
+        from fetch_data_for_list import FetchLabelHarikaeHinban
+        fetchLabelHarikaeHinban: IFetchDataForList = \
+                FetchLabelHarikaeHinban(cls._cnxn_effit)
+
+        return fetchLabelHarikaeHinban
+
+
+    @classmethod
     def get_createJson(cls) -> "CreateJson":
         from create_json import CreateJson
         ins_name: str = 'createJson'
@@ -299,7 +308,8 @@ class InstanceFactory:
                                 recorder: "Recorder",
                                 addToYoteiSoukos: Dict[str, IAddToYoteiSouko],
                                 unsouNames_honsya: Dict[str, str],
-                                unsouNames_toke: Dict[str, str]
+                                unsouNames_toke: Dict[str, str],
+                                harikaeMotoHinbans: Dict[str, str]
                                 )-> Tuple:
         #yusyutu_dict = {('T0060', 'H172'): 'y', ('T0060', ''): '',.....}
         # [{'得意先コード':'T1020', '納入先コード':' ', .....},{.....}....]
@@ -343,7 +353,8 @@ class InstanceFactory:
                                          recorder,
                                          addToYoteiSoukos,
                                          unsouNames_honsya,
-                                         sample_can_weights)
+                                         sample_can_weights,
+                                         harikaeMotoHinbans)
                     uriageForPackings_honsya.append(uriageForPacking_instance)
                 else:
                     uriageForPacking_instance: UriageForPacking = \
@@ -356,7 +367,8 @@ class InstanceFactory:
                                          recorder,
                                          addToYoteiSoukos,
                                          unsouNames_toke,
-                                         sample_can_weights)
+                                         sample_can_weights,
+                                         harikaeMotoHinbans)
                     uriageForPackings_toke.append(uriageForPacking_instance)
 
             cls._instances[ins_name] = (uriageForPackings_honsya, 

@@ -7,6 +7,8 @@ import re
 from decimal import Decimal
 from recorder import Recorder
 from IAdd_to_yoteiSouko import IAddToYoteiSouko
+from instance_factory import InstanceFactory
+
 '''
 全ての型ヒントの判定を遅延評価する。UriageForPacking自身のクラス名を型ヒントとして
 使っているので、エラーを出さないため。 61行目
@@ -23,7 +25,12 @@ class UriageForPacking:
                  recorder:Recorder,
                  addToYoteiSoukos: Dict[str, IAddToYoteiSouko],
                  unsouNames: Dict[str, str],
-                 sample_can_weights: dict[Decimal, Decimal])-> None:
+                 sample_can_weights: Dict[Decimal, Decimal],
+                 harikaeMotoHinbans: Dict[str, str])-> None:
+
+        # {'S6-UV221-U': 'S6-SV3800-U','S6-UV420-U': 'S6-MB20K2-U',....}
+        self._harikaeMotoHinbans = harikaeMotoHinbans
+
 
         #yusyutu_dict = {('T0060', 'H172'):'y', ('T0060', ''):'',.....}
         self._yusyutu_dict = yusyutu_dict
@@ -118,10 +125,14 @@ class UriageForPacking:
         return '土気出荷'
 
     def _calc_hinban(self)-> str:
+        hinban: str = self._売り品番
         if self._振替元品番 is not None: # Noneではなく、２文字以上の文字があったら
             if len(self._振替元品番) > 2:
-                return self._振替元品番
-        return self._売り品番
+                hinban = self._振替元品番
+
+        if hinban in self._harikaeMotoHinbans:
+            hinban = self._harikaeMotoHinbans[hinban]
+        return hinban
 
     def _calc_cans(self)-> int:
         cans: int = 0

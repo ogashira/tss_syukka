@@ -462,7 +462,7 @@ ShowToExcel "1" o-- "1" AllPackings
 | :---:                     | :---       | :---             | :---     | :---     |
 | 受注Check(休日表)         | order_holiday.csv | \\192.168.1.247\共有\受注check\master | effitA 稼働日カレンダ</br>東洋=工場:@@@@@</br> 運送屋=工場:@0001,部門:DUMMY | MCALEN.CalFlg: "1" (休日) |
 | 受注Check(リードタイム)   | order_nounyuusaki.csv | \\192.168.1.247\共有\受注check\master | effitA 発送先別運送距離マスタ | MDESTN_U2002.DesLeadTime(int) |
-| 受注Check(向け先、製品)   | n&h&m_modify..csv | \\192.168.1.247\共有\受注check\master | これまでと同じ | noTable |
+| 受注Check(向け先、製品)   | n&h&m_modify.xlsx | \\192.168.1.247\共有\受注check\master | これまでと同じ | noTable |
 | 出荷Robot(受注見込み)     | 受注見込みﾘｽﾄ.csv | \\192.168.1.247\共有\受注check\master | effitA 品番マスタ.ユーザ個別項目.受注見込区分</br>2:見込製品, 1:受注製品 | MHINCD.HinFree18(str) "2","1" |
 | 出荷Robot(仕入製品重量)   | noFile | noData | effitA 品番マスタ.ユーザ個別項目.仕入製品重量(kg) | MHINCD.HinFree19(str) "16.5" |
 | 出荷Robot(次回請求しない) | noFile | pickle | effitA 得意先マスタ.売上日基準請求区分=1:しない | MTOKUI.TokFree3(str) "1" |

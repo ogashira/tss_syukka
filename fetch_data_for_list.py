@@ -457,6 +457,43 @@ class FetchGrossWeight(IFetchDataForList):
         return columns, data_list
 
 
+class FetchLabelHarikaeHinban(IFetchDataForList):
+
+    def __init__(self, cnxn) -> None:
+        self.cnxn = cnxn
+        
+
+    def fetch_data(self) -> Tuple[List[str],List[List[Any]]]:
+
+        cursor = self.cnxn.cursor()
+
+        sqlQuery = ("SELECT MHINCD.HinHinCD AS 'hinban',"
+                    " MHINCD.HinFree20 AS 'harikaeMotoHinban'"
+                    " From dbo.MHINCD"
+                    " WHERE MHINCD.HinFree20 <> ''"
+                    " ORDER BY MHINCD.HinHinCD"
+                    )
+
+        data_list: List[List[Any]] = []
+        cursor.execute(sqlQuery)
+
+        # 1. カラム名を取得（リスト内包表記）
+        # cursor.description は (名前, 型, 表示サイズ, ...) というタプルのリスト
+        columns = [column[0] for column in cursor.description]
+
+        # 4. 2次元リストへ変換
+        # fetchall() はタプルのリストを返すため、リスト内包表記で各行をリスト化します
+        try:
+            data_list = [list(row) for row in cursor.fetchall()]
+        except Exception as e:
+            raise Exception(f'データベースfetch中に予期せぬエラーです FetchLabelHarikaeHinban') from e
+        finally:
+            cursor.close()
+            # cnxnは呼び出しもとでクローズ
+
+        return columns, data_list
+
+
 class FetchUnsoutaiouHonsya(IFetchDataForList):
 
     def __init__(self, cnxn) -> None:
