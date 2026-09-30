@@ -28,6 +28,12 @@ class UriageForPacking:
                  sample_can_weights: Dict[Decimal, Decimal],
                  harikaeMotoHinbans: Dict[str, str])-> None:
 
+        '''20261001 S6-UV420-1-U -> S6-UV420-U -> S6-MB20K2-U として
+        缶の重量を求める必要があったが、S6-UV420-Uで缶の重量を求めようとして、
+        缶重量が求められなかった。（PSマスタ：S6-UV420-U は貼替製品なので、
+        缶の配合がない） 品番マスタの自由使用欄20 を参照して、harikaeMotoHinbans
+        を作った。 これを使って貼替え製品の元製品を求める。
+        '''
         # {'S6-UV221-U': 'S6-SV3800-U','S6-UV420-U': 'S6-MB20K2-U',....}
         self._harikaeMotoHinbans = harikaeMotoHinbans
 
