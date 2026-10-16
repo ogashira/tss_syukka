@@ -78,7 +78,7 @@ class FetchUriageSumiForPacking(IFetchDataForList):
                     " RJYUCD.RjcJcTnk AS 'uriTnk',"
                     " RJYUCD.RjcJcKin AS 'uriKin',"
                     " RJYUCD.RjcMBiko AS '備考',"
-                    " RJYUCH.RjcHBiko AS 'n缶受注',"
+                    " RJYUCH.RjcHBiko AS '摘要缶数',"
                     " RJYUCD.RjcJcKojCD AS 'factory_name',"
                     " RJYUCD.RjcFree1 AS 'add'"
                     " From dbo.RJYUCD"

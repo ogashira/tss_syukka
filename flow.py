@@ -1,3 +1,4 @@
+import pprint
 import platform
 from re import I
 import os
@@ -13,6 +14,7 @@ from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings
 from create_tss_bat import CreateTssBat
 from show_to_excel import ShowToExcel
 from get_idx import GetIdx
+from toyo_untin import ToyoUntin
 
 # 実行時にはインポートせず、型チェックの為だけに書く
 if TYPE_CHECKING:
@@ -276,10 +278,6 @@ def start()-> None:
     sumi_for_packing_col, sumi_for_packing_data = data_fetch(sumi_for_packing, 
                                                              recorder)
 
-    # TODO 後で消す
-    print(sumi_for_packing_col)
-    print(sumi_for_packing_data)
-
 
     ''' productCan, tnju, grossWeightデータを取得して辞書にする '''
     productCan = InstanceFactory.get_fetchProductCan()
@@ -451,6 +449,40 @@ def start()-> None:
                                '@0001',
                                createDictFromList,
                                recorder)
+
+    '''
+    東洋運賃を計算して、displayとLogに出力する。
+    '''
+    toyo_untin: Optional[ToyoUntin] = None
+    try:
+        if allPackings_toke is not None:
+            toyo_untin = InstanceFactory.get_toyoUntin()
+    except FileNotFoundError as e:
+        recorder.out_log(f'toyo_untinのファイルが見つかりません。中止します{e}', 
+                         '\n')
+        recorder.out_file(f'toyo_untinのファイルが見つかりません。中止します{e}', 
+                          '\n')
+        sys.exit(1)
+
+    list_toyo_untin_toke: List[List[Any]] = []
+    list_toyo_untin_honsya: List[List[Any]] = []
+    if allPackings_toke is not None:
+        cast(AllPackings, allPackings_toke).get_toyo_untin(toyo_untin)
+        cast(AllPackings, allPackings_toke).append_toyo_untin(
+                                                  list_toyo_untin_toke)
+        # TODO 後で消す
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        pprint.pprint(list_toyo_untin_toke)
+
+    if allPackings_honsya is not None:
+        cast(AllPackings, allPackings_honsya).get_toyo_untin(toyo_untin)
+        cast(AllPackings, allPackings_honsya).append_toyo_untin(
+                                                 list_toyo_untin_honsya)
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        pprint.pprint(list_toyo_untin_honsya)
+
+
+
 
 
 

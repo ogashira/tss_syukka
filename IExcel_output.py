@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, List, Dict, Any, Set, Tuple
 from decimal import Decimal
 from enum import Enum
 from recorder import Recorder
+from toyo_untin import ToyoUntin
 
 
 if TYPE_CHECKING:
@@ -227,6 +228,15 @@ class AllPackings(IExcelOutput):
         self._recorder.out_file(code_txt, '\n')
 
 
+    def get_toyo_untin(self, toyo_untin: ToyoUntin)-> None:
+        for packingForDenpyo in self._packingForDenpyos:
+            packingForDenpyo.get_toyo_untin(toyo_untin)
+
+
+    def append_toyo_untin(self, list_toyo_untin: List[List[Any]])-> None:
+        for packingForDenpyo in self._packingForDenpyos:
+            packingForDenpyo.append_toyo_untin(list_toyo_untin)
+
 class ExcelCols(Enum):
     TOKUICD = 4
     NONYUCD = 5
@@ -267,6 +277,9 @@ class PackingForDenpyo:
         '''ここで、uriageForPackingsに総重量sumWeightをセットする'''
         self._set_sumWeight_to_uriageForPacking()
 
+        '''ここで、uriageForPackingsにsum_cans_for_denpyoをセットする'''
+        self._set_sum_cans_for_denpyo_to_uriageForPacking()
+
         '''売価を求める'''
         self._uriKin = self._calc_sumUriKin()
 
@@ -303,11 +316,22 @@ class PackingForDenpyo:
             sumWeight = uriage.plus_myWeight(sumWeight)
         return sumWeight
 
-
     def _set_sumWeight_to_uriageForPacking(self):
         sumWeight: Decimal = self._calc_sumWeight()
         for uriage in self._uriageForPackings:
             uriage.set_sumWeight(sumWeight)
+
+    ''' uriageForPackingにsum_cans_for_denpyoを追加する>>>>>>>>>>>>>>>>>'''
+    def _calc_sum_cans_for_denpyo(self)-> int:
+        sum_cans_for_denpyo: int = 0
+        for uriage in self._uriageForPackings:
+            sum_cans_for_denpyo = uriage.plus_mycans(sum_cans_for_denpyo)
+        return sum_cans_for_denpyo
+
+    def _set_sum_cans_for_denpyo_to_uriageForPacking(self):
+        sum_cans_for_denpyo: int = self._calc_sum_cans_for_denpyo()
+        for uriage in self._uriageForPackings:
+            uriage.set_sum_cans_for_denpyo(sum_cans_for_denpyo)
 
     '''売価を求める(伝票ごと)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'''
     def _calc_sumUriKin(self)-> Decimal:
@@ -317,6 +341,14 @@ class PackingForDenpyo:
 
         return sumUriKin
 
+
+    def get_toyo_untin(self, toyo_untin: ToyoUntin)-> None:
+        for uriage in self._uriageForPackings:
+            uriage.get_toyo_untin(toyo_untin)
+
+    def append_toyo_untin(self, list_toyo_untin: List[List[Any]])-> None:
+        for uriage in self._uriageForPackings:
+            uriage.append_toyo_untin(list_toyo_untin)
 
     def show_uriKin_to_excel(self, ws, myborder)-> None:
         

@@ -6,6 +6,7 @@ from IExcel_output import IExcelOutput, SyukkaJissekiSyoukai, AllPackings, \
 from IAdd_to_yoteiSouko import AddForCoa, AddForSiteiDenpyo, AddForEigyosyo, \
         AddForDohai, AddForWeekdayDiff, AddForJikai, IAddToYoteiSouko
 from fetch_data_for_list import IFetchDataForList
+from toyo_untin import ToyoUntin
 
 # 実行時にはインポートせず、型チェックの為だけに書く
 if TYPE_CHECKING:
@@ -485,3 +486,7 @@ class InstanceFactory:
                         noJikais: List[str])-> IAddToYoteiSouko:
         addForJikai: IAddToYoteiSouko = AddForJikai(close_days, noJikais)  
         return addForJikai
+
+    @classmethod
+    def get_toyoUntin(cls) -> ToyoUntin:
+        return ToyoUntin()

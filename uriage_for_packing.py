@@ -8,6 +8,7 @@ from decimal import Decimal
 from recorder import Recorder
 from IAdd_to_yoteiSouko import IAddToYoteiSouko
 from instance_factory import InstanceFactory
+from toyo_untin import ToyoUntin
 
 '''
 全ての型ヒントの判定を遅延評価する。UriageForPacking自身のクラス名を型ヒントとして
@@ -62,6 +63,7 @@ class UriageForPacking:
         self._納期: str = dict_data['納期']
         self._受注数量: Decimal = dict_data['uriKosu']
         self._受注単位: str = dict_data['受注単位']
+        self._tekiyou_cans: str = dict_data['摘要缶数']
         self._sample_can_weights = sample_can_weights
 
         add: int = 0
@@ -80,7 +82,11 @@ class UriageForPacking:
         self._cans: int = self._calc_cans()
         self._weight: Decimal = self._calc_weight()
         self._sumWeight:Decimal = Decimal('0')
+        self._sum_cans_for_denpyo:int = 0
+        self._toyo_untin: float = 0
+        self._basic_fee: int = 0
         self._出荷予定倉庫 = self._add_to_yoteiSouko()
+        self._ireme: float = float(self._tnju_dic.get(self._hinban, 0))/1000
 
         # 最初に運賃計算した運送屋と、売上処理した運送屋が同じかどうかを判定する
         self._check_diff_unsouName()
@@ -392,3 +398,47 @@ class UriageForPacking:
             return sumUriKin
         sumUriKin += self._売り金額
         return sumUriKin
+
+    def plus_mycans(self, sum_cans_for_denpyo) -> int:
+        sum_cans_for_denpyo +=  self._cans
+        return sum_cans_for_denpyo
+
+    def set_sum_cans_for_denpyo(self, sum_cans_for_denpyo) -> None:
+        self._sum_cans_for_denpyo = sum_cans_for_denpyo
+
+    def get_toyo_untin(self, toyo_untin: ToyoUntin)-> None:
+        nonyuCD = self._納入先コード
+        if self._納入先コード == ' ':
+            nonyuCD = ''
+
+        tekiyou_cans: int = 0
+        if self._tekiyou_cans != '' and self._tekiyou_cans != ' ':
+            tekiyou_cans = int(self._tekiyou_cans)
+
+        cans: int = max(tekiyou_cans, self._sum_cans_for_denpyo)
+        
+
+        basic_fee: int = \
+        toyo_untin.get_basic_fee(self._得意先コード, nonyuCD, cans)
+
+        self._basic_fee = basic_fee
+
+        '''
+        東洋運賃は、塗料の入れ目（canを含まない）とbase_feeで計算
+        '''
+        self._toyo_untin = basic_fee * (self._ireme * self._cans)
+
+
+    def append_toyo_untin(self, list_toyo_untin: List[List[Any]])-> None:
+        list_toyo_untin.append([self._得意先コード, 
+                                    self._納入先コード,
+                                    self._納入先名称１,
+                                    self._品名,
+                                    self._ireme,
+                                    self._cans,
+                                    self._tekiyou_cans,
+                                    self._sum_cans_for_denpyo,
+                                    self._basic_fee,
+                                    self._toyo_untin])
+
+                                     
